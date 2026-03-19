@@ -263,10 +263,6 @@ function renderUsers(users = []) {
 
 async function fetchUsers() {
   try {
-    /* ================================
-       CHANGE THIS URL STRUCTURE
-       TO MATCH YOUR DJANGO API
-    ================================ */
     const params = new URLSearchParams({
       page: userState.page,
       page_size: userState.pageSize,
@@ -278,9 +274,7 @@ async function fetchUsers() {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        // "Authorization": "Bearer YOUR_TOKEN_HERE"
-      },
-      credentials: "include", // keep this if using session auth / cookies
+      }
     });
 
     if (!response.ok) {
@@ -288,15 +282,6 @@ async function fetchUsers() {
     }
 
     const data = await response.json();
-
-    /* =========================================
-       CHANGE THIS TOO IF YOUR DJANGO RESPONSE
-       DOES NOT USE:
-       {
-         results: [],
-         count: 128
-       }
-    ========================================= */
     renderUsers(data.results || []);
     updateEntriesInfo(data.count || 0);
   } catch (error) {
@@ -310,6 +295,105 @@ async function fetchUsers() {
         </tr>
       `;
     }
+  }
+}
+
+async function editUser(userId) {
+  try {
+    const response = await fetch(`/api/users/${userId}/`);
+    if (!response.ok) throw new Error("Failed to load user");
+
+    const user = await response.json();
+
+    const first_name = prompt("First name:", user.first_name || "");
+    if (first_name === null) return;
+
+    const last_name = prompt("Last name:", user.last_name || "");
+    if (last_name === null) return;
+
+    const username = prompt("Username:", user.username || "");
+    if (username === null) return;
+
+    const email = prompt("Email:", user.email || "");
+    if (email === null) return;
+
+    const phone = prompt("Phone:", user.phone || "");
+    if (phone === null) return;
+
+    const role = prompt("Role (admin, super-admin, staff, auditor, communications, director):", user.role || "staff");
+    if (role === null) return;
+
+    const status = prompt("Status (active, paused, terminated):", user.status || "paused");
+    if (status === null) return;
+
+    const updateResponse = await fetch(`/api/users/${userId}/`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        first_name,
+        last_name,
+        username,
+        email,
+        phone,
+        role,
+        status,
+      }),
+    });
+
+    if (!updateResponse.ok) {
+      const err = await updateResponse.text();
+      throw new Error(err || "Failed to update user");
+    }
+
+    fetchUsers();
+  } catch (error) {
+    console.error("Edit user error:", error);
+    alert("Failed to update user.");
+  }
+}
+
+async function freezeUser(userId) {
+  const confirmed = confirm("Freeze this user account?");
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`/api/users/${userId}/freeze/`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: "paused" }),
+    });
+
+    if (!response.ok) throw new Error("Freeze failed");
+
+    fetchUsers();
+  } catch (error) {
+    console.error("Freeze user error:", error);
+    alert("Failed to freeze user.");
+  }
+}
+
+async function deleteUser(userId) {
+  const confirmed = confirm("Delete this user permanently?");
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`/api/users/${userId}/`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) throw new Error("Delete failed");
+
+    fetchUsers();
+  } catch (error) {
+    console.error("Delete user error:", error);
+    alert("Failed to delete user.");
   }
 }
 
@@ -378,77 +462,7 @@ if (selectAllUsers) {
   });
 }
 
-/* =========================================
-   CRUD ACTIONS
-   CONNECT THESE TO DJANGO ENDPOINTS
-========================================= */
 
-async function editUser(userId) {
-  console.log("Edit user:", userId);
-
-  // OPEN EDIT MODAL HERE
-  // fetch(`/api/users/${userId}/`)
-  // then populate form
-}
-
-async function freezeUser(userId) {
-  const confirmed = confirm("Freeze this user account?");
-  if (!confirmed) return;
-
-  try {
-    /* =========================================
-       CHANGE THIS ENDPOINT TO YOUR DJANGO ROUTE
-       Example:
-       PATCH /api/users/<id>/freeze/
-    ========================================= */
-    const response = await fetch(`/api/users/${userId}/freeze/`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        // "X-CSRFToken": getCSRFToken(),
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        status: "paused"
-      }),
-    });
-
-    if (!response.ok) throw new Error("Freeze failed");
-
-    fetchUsers();
-  } catch (error) {
-    console.error("Freeze user error:", error);
-    alert("Failed to freeze user.");
-  }
-}
-
-async function deleteUser(userId) {
-  const confirmed = confirm("Delete this user permanently?");
-  if (!confirmed) return;
-
-  try {
-    /* =========================================
-       CHANGE THIS TO YOUR DJANGO DELETE ROUTE
-       Example:
-       DELETE /api/users/<id>/
-    ========================================= */
-    const response = await fetch(`/api/users/${userId}/`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        // "X-CSRFToken": getCSRFToken(),
-      },
-      credentials: "include",
-    });
-
-    if (!response.ok) throw new Error("Delete failed");
-
-    fetchUsers();
-  } catch (error) {
-    console.error("Delete user error:", error);
-    alert("Failed to delete user.");
-  }
-}
 
 /* =========================================
    ADD USER BUTTON

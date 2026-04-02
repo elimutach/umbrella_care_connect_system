@@ -1,0 +1,22 @@
+.auth-page--signup .auth-shell {
+  grid-template-columns: 1.20fr 0.88fr;
+}
+
+.auth-page--signup .auth-visual {
+  border-left: 1px solid rgba(0, 0, 0, 0.04);
+  border-right: 0;
+}
+
+body.dark-mode.auth-page--signup .auth-visual {
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 991.98px) {
+  .auth-page--signup .auth-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-page--signup .auth-visual {
+    border-left: 0;
+  }
+}

@@ -1,9 +1,11 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 from accounts.models import UserManagement
-from needs.models import Need
+from needs.models import NeedRecord
 
 # Create your models here.
+
 class Donation(models.Model):
     SOURCE_CHOICES = [
         ("admin", "Admin"),
@@ -34,7 +36,7 @@ class Donation(models.Model):
     )
 
     need = models.ForeignKey(
-        Need,
+        NeedRecord,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -62,11 +64,11 @@ class Donation(models.Model):
     unit = models.TextField(null=True, blank=True)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    donation_date = models.DateField()
+    donation_date = models.DateField(default=timezone.now)
     notes = models.TextField(null=True, blank=True)
 
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         managed = False
@@ -75,4 +77,4 @@ class Donation(models.Model):
     def __str__(self):
         if self.donation_type == "cash":
             return f"Cash Donation - {self.amount}"
-        return f"In-Kind Donation - {self.item_name}"
+        return f"In-Kind Donation - {self.item_name or 'Item'}"

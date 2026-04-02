@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Record Donation</title>
+</head>
+<body>
+    <h1>Record Donation</h1>
+
+    {% if messages %}
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save Donation</button>
+    </form>
+
+    <p><a href="{% url 'donation_list' %}">View Donations</a></p>
+</body>
+</html>

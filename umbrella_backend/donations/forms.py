@@ -1,4 +1,6 @@
 from django import forms
+from accounts.models import UserManagement
+from needs.models import NeedRecord
 from .models import Donation
 
 
@@ -20,6 +22,17 @@ class DonationForm(forms.ModelForm):
             "donation_date",
             "notes",
         ]
+        widgets = {
+            "donation_date": forms.DateInput(attrs={"type": "date"}),
+            "item_description": forms.Textarea(attrs={"rows": 3}),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["donor"].queryset = UserManagement.objects.filter(role="donor").order_by("username")
+        self.fields["recorded_by"].queryset = UserManagement.objects.filter(role="admin").order_by("username")
+        self.fields["need"].queryset = NeedRecord.objects.all().order_by("title")
 
     def clean(self):
         cleaned_data = super().clean()

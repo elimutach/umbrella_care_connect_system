@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -73,3 +74,47 @@ class Need(models.Model):
         self.full_clean()
         self.update_status()
         super().save(*args, **kwargs)
+
+
+class NeedRecord(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("active", "Active"),
+        ("partially_funded", "Partially Funded"),
+        ("fulfilled", "Fulfilled"),
+        ("expired", "Expired"),
+        ("closed", "Closed"),
+    ]
+
+    NEED_TYPE_CHOICES = [
+        ("cash", "Cash"),
+        ("in_kind", "In Kind"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    needs_registration_code = models.TextField(unique=True)
+    title = models.TextField()
+    date = models.DateField(default=timezone.now)
+    description = models.TextField(null=True, blank=True)
+
+    amount_needed = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    amount_received = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    donors = models.JSONField(default=list, blank=True, null=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="pending")
+
+    expiring_at = models.DateTimeField(null=True, blank=True)
+    image_url = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    need_type = models.CharField(max_length=20, choices=NEED_TYPE_CHOICES, default="in_kind")
+    unit = models.TextField(default="units")
+
+    class Meta:
+        managed = False
+        db_table = "needs"
+
+    def __str__(self):
+        return self.title

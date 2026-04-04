@@ -1,6 +1,6 @@
-//const API_BASE_URL= /*process.env.API_URL || "http://localhost:8000" || "http://127.0.0.1:8000"*/ "";
+const API_BASE_URL= /*process.env.API_URL || "http://localhost:8000" || "http://127.0.0.1:8000"*/ "";
 //const API_BASE_URL = window.location.origin;
-const API_BASE_URL= "http://127.0.0.1:8000";
+
 
 const dateEl = document.getElementById("currentDate");
   const themeToggle = document.getElementById("themeToggle");
@@ -72,253 +72,58 @@ const dateEl = document.getElementById("currentDate");
   }
 
   function initReportPreview() {
-  const reportSelect = document.getElementById('reportType');
-  const stat1 = document.getElementById('stat1');
-  const stat2 = document.getElementById('stat2');
-  const stat3 = document.getElementById('stat3');
-  const stat4 = document.getElementById('stat4');
-  const stat5 = document.getElementById('stat5');
-  const detailBlock = document.getElementById('detailedReportBlock');
-  const genReportBtn = document.getElementById('genReportBtn');
+    const reportSelect = document.getElementById('reportType');
+    const stat1 = document.getElementById('stat1');
+    const stat2 = document.getElementById('stat2');
+    const stat3 = document.getElementById('stat3');
+    const stat4 = document.getElementById('stat4');
+    const stat5 = document.getElementById('stat5');
+    const detailBlock = document.getElementById('detailedReportBlock');
+    const genReportBtn = document.getElementById('genReportBtn');
 
-  // Optional date inputs if you add them in HTML later
-  const reportStartDate = document.getElementById('startDate');
-const reportEndDate = document.getElementById('endDate');
-const exportBtn = document.getElementById('exportBtn');
+    if (!reportSelect) return;
 
-  if (!reportSelect || !detailBlock) return;
-
-  const REPORTS_API = `${API_BASE_URL}/api/reports/`;
-  const REPORTS_EXPORT_API = `${API_BASE_URL}/api/reports/export/`;
-
-  function getTodayISO() {
-    const d = new Date();
-    return d.toISOString().split("T")[0];
-  }
-
-  function getFirstDayOfMonthISO() {
-    const d = new Date();
-    d.setDate(1);
-    return d.toISOString().split("T")[0];
-  }
-
-  function mapReportType(uiValue) {
-    const value = (uiValue || "").toLowerCase().trim();
-
-    if (value.includes("donation")) return "donations";
-    if (value.includes("volunteer")) return "volunteers";
-    if (value.includes("need")) return "needs";
-
-    // "Donor activeness" is not yet in backend
-    if (value.includes("donor")) return "unsupported_donor_activity";
-
-    return "donations";
-  }
-
-  function buildQuery(reportType) {
-    const params = new URLSearchParams();
-    params.set("report_type", reportType);
-
-    if (reportStartDate?.value) params.set("start_date", reportStartDate.value);
-    if (reportEndDate?.value) params.set("end_date", reportEndDate.value);
-
-    return params.toString();
-  }
-
-  function setStat(el, value) {
-    if (!el) return;
-    el.innerText = value ?? "—";
-  }
-
-  function renderStats(reportType, summary = {}) {
-    if (reportType === "donations") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.cash_total ?? 0);
-      setStat(stat3, summary.in_kind_count ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
+    function updateReportPreview() {
+      const type = reportSelect.value;
+      if (type === 'Donations report') {
+        stat1.innerText = '486'; stat2.innerText = '34'; stat3.innerText = '212'; stat4.innerText = '142'; stat5.innerText = '29';
+        detailBlock.innerHTML = `<div><i class="bi bi-cash-stack fs-3 me-2"></i> <strong>Donations summary</strong></div>
+          <div class="progress-tag"><i class="bi bi-calendar-week"></i> cash: 312K KES · in-kind: 174 items</div>
+          <div class="progress-tag"><i class="bi bi-graph-up-arrow"></i> 23% increase from last month</div>
+          <div class="ms-auto"><i class="bi bi-download"></i> export</div>`;
+      } else if (type === 'Volunteer & duties') {
+        stat1.innerText = '38'; stat2.innerText = '12'; stat3.innerText = '316'; stat4.innerText = '46'; stat5.innerText = '9';
+        detailBlock.innerHTML = `<div><i class="bi bi-person-workspace fs-3 me-2"></i> <strong>Volunteer duties · activeness</strong></div>
+          <div class="progress-tag"><i class="bi bi-calendar-check"></i> 24 duties scheduled, 19 completed</div>
+          <div class="progress-tag"><i class="bi bi-heart-pulse"></i> top volunteer: Mary N. (12 hrs)</div>
+          <div class="ms-auto"><i class="bi bi-file-spreadsheet"></i> full log</div>`;
+      } else if (type === 'Needs & fulfillment') {
+        stat1.innerText = '52'; stat2.innerText = '34'; stat3.innerText = '18'; stat4.innerText = '26'; stat5.innerText = '11';
+        detailBlock.innerHTML = `<div><i class="bi bi-box-seam fs-3 me-2"></i> <strong>Needs fulfillment rate</strong></div>
+          <div class="progress-tag">Food packs: 78% · Education: 42% · Medical: 90%</div>
+          <div class="progress-tag">Most urgent: School uniforms (need 60, got 12)</div>
+          <div class="ms-auto"><i class="bi bi-printer"></i> print</div>`;
+      } else if (type === 'Donor activeness') {
+        stat1.innerText = '210'; stat2.innerText = '148'; stat3.innerText = '62'; stat4.innerText = '87'; stat5.innerText = '13';
+        detailBlock.innerHTML = `<div><i class="bi bi-people-fill fs-3 me-2"></i> <strong>Donor engagement</strong></div>
+          <div class="progress-tag">Repeat donors: 64% · new donors this month: 28</div>
+          <div class="progress-tag">avg donation size: 3,200 KES</div>
+          <div class="ms-auto"><i class="bi bi-graph-up"></i> trends</div>`;
+      } else {
+        stat1.innerText = '—'; stat2.innerText = '—'; stat3.innerText = '—'; stat4.innerText = '—'; stat5.innerText = '—';
+        detailBlock.innerHTML = `<div><i class="bi bi-sliders2"></i> select a report type</div>`;
+      }
     }
 
-    if (reportType === "volunteers") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.confirmed_count ?? 0);
-      setStat(stat3, summary.attended_count ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
-    }
-
-    if (reportType === "needs") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.total_needed ?? 0);
-      setStat(stat3, summary.total_received ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
-    }
-
-    setStat(stat1, "—");
-    setStat(stat2, "—");
-    setStat(stat3, "—");
-    setStat(stat4, "—");
-    setStat(stat5, "—");
-  }
-
-  function renderTable(headers = [], rows = []) {
-    if (!headers.length) {
-      return `<div class="text-muted">No report columns available.</div>`;
-    }
-
-    if (!rows.length) {
-      return `<div class="text-muted mt-2">No records found for this period.</div>`;
-    }
-
-    return `
-      <div class="table-responsive mt-3">
-        <table class="table table-sm table-bordered align-middle mb-0">
-          <thead>
-            <tr>
-              ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.slice(0, 15).map((row) => `
-              <tr>
-                ${row.map((cell) => `<td>${escapeHtml(String(cell ?? "-"))}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-      ${rows.length > 15 ? `<div class="small text-muted mt-2">Showing first 15 rows. Export CSV for the full report.</div>` : ""}
-    `;
-  }
-
-  function renderUnsupportedReport() {
-    renderStats("unsupported", {});
-    detailBlock.innerHTML = `
-      <div><i class="bi bi-info-circle fs-3 me-2"></i> <strong>Donor activeness</strong></div>
-      <div class="progress-tag">This report type is not connected to the backend yet.</div>
-      <div class="progress-tag">Supported now: Donations, Volunteer & duties, Needs & fulfillment.</div>
-    `;
-  }
-
-  function renderError(message) {
-    renderStats("unsupported", {});
-    detailBlock.innerHTML = `
-      <div><i class="bi bi-exclamation-triangle fs-3 me-2"></i> <strong>Report failed</strong></div>
-      <div class="progress-tag">${escapeHtml(message || "Unable to load report.")}</div>
-    `;
-  }
-
-  function wireExportButton(reportType) {
-    const exportBtn = document.getElementById("exportReportCsvBtn");
-    if (!exportBtn) return;
-
-    exportBtn.addEventListener("click", () => {
-      const query = buildQuery(reportType);
-      window.open(`${REPORTS_EXPORT_API}?${query}`, "_blank");
-    });
-  }
-
-  async function loadReport(showFeedback = false) {
-  const mappedType = mapReportType(reportSelect.value);
-
-  if (mappedType === "unsupported_donor_activity") {
-    renderUnsupportedReport();
-    return;
-  }
-
-  try {
-    if (genReportBtn) {
-      genReportBtn.disabled = true;
-      genReportBtn.innerText = "Loading...";
-    }
-
-    const url = `${REPORTS_API}?${buildQuery(mappedType)}`;
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Accept": "application/json",
-      },
+    reportSelect.addEventListener('change', updateReportPreview);
+    genReportBtn?.addEventListener('click', function (e) {
+      e.preventDefault();
+      updateReportPreview();
+      alert('Report generated (demo) – check figures updated.');
     });
 
-    const contentType = response.headers.get("content-type") || "";
-    const rawText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${rawText.slice(0, 300)}`);
-    }
-
-    if (!contentType.includes("application/json")) {
-      throw new Error(`Expected JSON but got: ${rawText.slice(0, 300)}`);
-    }
-
-    const data = JSON.parse(rawText);
-
-    renderStats(mappedType, data.summary || {});
-
-    detailBlock.innerHTML = `
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div>
-          <div><i class="bi bi-bar-chart-line fs-3 me-2"></i> <strong>${escapeHtml(data.summary?.title || "Report")}</strong></div>
-          <div class="progress-tag">
-            Period: ${escapeHtml(data.start_date || "-")} to ${escapeHtml(data.end_date || "-")}
-          </div>
-        </div>
-      </div>
-      ${renderTable(data.headers || [], data.rows || [])}
-    `;
-
-    if (showFeedback) {
-      alert("Report generated successfully.");
-    }
-  } catch (error) {
-    console.error("Report load error:", error);
-    renderError(error.message || "Failed to load report.");
-  } finally {
-    if (genReportBtn) {
-      genReportBtn.disabled = false;
-      genReportBtn.innerText = "Generate Report";
-    }
+    updateReportPreview();
   }
-}
-
-  // Optional defaults if those inputs exist
-  if (reportStartDate && !reportStartDate.value) {
-    reportStartDate.value = getFirstDayOfMonthISO();
-  }
-
-  if (reportEndDate && !reportEndDate.value) {
-    reportEndDate.value = getTodayISO();
-  }
-
-  reportSelect.addEventListener('change', () => loadReport(false));
-  reportStartDate?.addEventListener('change', () => loadReport(false));
-  reportEndDate?.addEventListener('change', () => loadReport(false));
-
-  genReportBtn?.addEventListener('click', function (e) {
-    e.preventDefault();
-    loadReport(true);
-  });
-
-  exportBtn?.addEventListener('click', function (e) {
-  e.preventDefault();
-
-  const mappedType = mapReportType(reportSelect.value);
-  if (mappedType === "unsupported_donor_activity") {
-    alert("This report type is not connected yet.");
-    return;
-  }
-
-  const query = buildQuery(mappedType);
-  window.open(`${REPORTS_EXPORT_API}?${query}`, "_blank");
-});
-
-  loadReport(false);
-}
 
   if (localStorage.getItem('umbrellaTheme') === 'dark') setTheme('dark');
   else setTheme('light');
@@ -335,6 +140,540 @@ const exportBtn = document.getElementById('exportBtn');
   } else {
     window.addEventListener('DOMContentLoaded', startApp, { once: true });
   }
+})();
+
+
+/* =========================================
+   DASHBOARD HOME SUMMARY
+========================================= */
+(function () {
+  const page = document.querySelector('.app-page[data-page="dashboard"]');
+  if (!page) return;
+
+  const needsValue = document.getElementById('dashboardActiveNeedsValue');
+  const needsMeta = document.getElementById('dashboardNeedsMeta');
+  const needFulfillmentMeta = document.getElementById('dashboardNeedFulfillmentMeta');
+  const donationValue = document.getElementById('dashboardDonationValue');
+  const donationMeta = document.getElementById('dashboardDonationMeta');
+  const donationGoalMeta = document.getElementById('dashboardDonationGoalMeta');
+  const volunteerValue = document.getElementById('dashboardVolunteerValue');
+  const volunteerMeta = document.getElementById('dashboardVolunteerMeta');
+  const volunteerSignupMeta = document.getElementById('dashboardVolunteerSignupMeta');
+  const todayEventsValue = document.getElementById('dashboardTodayEventsValue');
+  const upcomingMeta = document.getElementById('dashboardUpcomingMeta');
+  const currentDateText = document.getElementById('dashboardCurrentDateText');
+  const currentDayChip = document.getElementById('dashboardCurrentDayChip');
+  const todayLabel = document.getElementById('dashboardTodayLabel');
+  const todayScheduleList = document.getElementById('dashboardTodayScheduleList');
+  const priorityList = document.getElementById('dashboardPriorityList');
+  const weekBars = document.getElementById('dashboardWeekBars');
+  const weekSummary = document.getElementById('dashboardWeekSummary');
+  const fulfillmentScore = document.getElementById('dashboardFulfillmentScore');
+  const fulfillmentCaption = document.getElementById('dashboardFulfillmentCaption');
+  const donorScore = document.getElementById('dashboardDonorScore');
+  const donorCaption = document.getElementById('dashboardDonorCaption');
+  const volunteerScore = document.getElementById('dashboardVolunteerScore');
+  const volunteerCaption = document.getElementById('dashboardVolunteerCaption');
+  const quickScheduleBtn = document.getElementById('dashboardQuickScheduleBtn');
+  const dashboardActionAddEvent = document.getElementById('dashboardActionAddEvent');
+
+  const NEEDS_API = `${API_BASE_URL}/needs/api/`;
+  const DONATION_STATS_API = `${API_BASE_URL}/donations/api/donations/stats/`;
+  const DONATIONS_API = `${API_BASE_URL}/donations/api/donations/`;
+  const VOLUNTEERS_API = `${API_BASE_URL}/api/volunteers/`;
+  const CALENDAR_API = `${API_BASE_URL}/api/calendar/events/`;
+
+  function formatKES(value) {
+    const num = Number(value || 0);
+    return `KES ${num.toLocaleString()}`;
+  }
+
+  function formatHumanDate(date) {
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
+  function formatTimeRange(event) {
+    if (event.all_day) return 'All day';
+
+    const start = event.start_time || event.start_datetime || '';
+    const end = event.end_time || event.end_datetime || '';
+
+    const formatClock = (value) => {
+      if (!value) return '';
+
+      if (value.includes('T')) {
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) {
+          return date.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        }
+      }
+
+      const raw = String(value).slice(0, 5);
+      const [hourText = '00', minuteText = '00'] = raw.split(':');
+      const hour = Number(hourText);
+      const minute = Number(minuteText);
+
+      if (Number.isNaN(hour) || Number.isNaN(minute)) return raw;
+
+      const temp = new Date();
+      temp.setHours(hour, minute, 0, 0);
+
+      return temp.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    };
+
+    const startText = formatClock(start);
+    const endText = formatClock(end);
+
+    if (startText && endText) return `${startText} - ${endText}`;
+    if (startText) return startText;
+    return 'Time not set';
+  }
+
+  function toArray(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.results)) return payload.results;
+    return [];
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      credentials: 'include',
+    });
+
+    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+    return response.json();
+  }
+
+  function normalizeEvent(event = {}) {
+    const startDate =
+      event.start_date ||
+      event.date ||
+      event.start ||
+      (event.start_datetime ? String(event.start_datetime).slice(0, 10) : '');
+
+    const endDate = event.end_date || event.end || startDate;
+
+    return {
+      ...event,
+      start_date: startDate,
+      end_date: endDate,
+      title: event.title || 'Untitled event',
+      description: event.description || '',
+      color: event.color || '#2563eb',
+      status: event.status || 'scheduled',
+      all_day: Boolean(event.all_day),
+    };
+  }
+
+  function getDateOnly(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  function getEventDateRange(event) {
+    const start = event.start_date
+      ? new Date(`${event.start_date}T00:00:00`)
+      : null;
+
+    const end = event.end_date
+      ? new Date(`${event.end_date}T23:59:59`)
+      : start;
+
+    return { start, end };
+  }
+
+  function isTodayEvent(event, today) {
+    const { start, end } = getEventDateRange(event);
+    if (!start || !end) return false;
+
+    return (
+      getDateOnly(today) >= getDateOnly(start) &&
+      getDateOnly(today) <= getDateOnly(end)
+    );
+  }
+
+  function isUpcomingEvent(event, today) {
+    const { start } = getEventDateRange(event);
+    if (!start) return false;
+    return getDateOnly(start) > getDateOnly(today);
+  }
+
+  function renderWeekBars(metrics) {
+    if (!weekBars) return;
+
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    weekBars.innerHTML = labels
+      .map((label, index) => {
+        const need = metrics.needs[index] || 0;
+        const donation = metrics.donations[index] || 0;
+        const volunteer = metrics.volunteers[index] || 0;
+        const max = Math.max(need, donation, volunteer, 1);
+
+        const needHeight = Math.max(12, Math.round((need / max) * 84));
+        const donationHeight = Math.max(12, Math.round((donation / max) * 84));
+        const volunteerHeight = Math.max(12, Math.round((volunteer / max) * 84));
+
+        return `
+          <div class="dashboard-bar-day">
+            <div class="dashboard-bar-stack">
+              <span class="bar needs" style="height:${needHeight}px"></span>
+              <span class="bar donations" style="height:${donationHeight}px"></span>
+              <span class="bar volunteers" style="height:${volunteerHeight}px"></span>
+            </div>
+            <div class="dashboard-bar-label">${label}</div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  function renderSchedule(events) {
+    if (!todayScheduleList) return;
+
+    if (!events.length) {
+      todayScheduleList.innerHTML = `
+        <div class="dashboard-schedule-empty">
+          <i class="bi bi-calendar2-x"></i>
+          <span>No schedule for today yet. Add one and block the day properly.</span>
+        </div>
+      `;
+      return;
+    }
+
+    todayScheduleList.innerHTML = events
+      .slice(0, 5)
+      .map(
+        (event) => `
+          <article class="dashboard-schedule-item">
+            <span class="dashboard-schedule-dot" style="background:${escapeHtml(event.color || '#2563eb')}"></span>
+            <div class="dashboard-schedule-copy">
+              <strong>${escapeHtml(event.title || 'Untitled event')}</strong>
+              <p>${escapeHtml(event.description || 'Operational event')}</p>
+            </div>
+            <div class="dashboard-schedule-time">${escapeHtml(formatTimeRange(event))}</div>
+          </article>
+        `
+      )
+      .join('');
+  }
+
+  function renderPriorities(needs, upcomingEvents) {
+    if (!priorityList) return;
+
+    const urgentNeeds = [...needs]
+      .sort(
+        (a, b) =>
+          new Date(a.deadline || '2999-12-31') -
+          new Date(b.deadline || '2999-12-31')
+      )
+      .slice(0, 3)
+      .map((item) => ({
+        type: 'Need',
+        title: item.title || 'Untitled need',
+        meta: item.deadline ? `Deadline ${item.deadline}` : 'No deadline set',
+        icon: 'bi-basket2',
+      }));
+
+    const nextEvents = [...upcomingEvents]
+      .sort(
+        (a, b) =>
+          new Date(a.start_date || '2999-12-31') -
+          new Date(b.start_date || '2999-12-31')
+      )
+      .slice(0, 2)
+      .map((item) => ({
+        type: 'Event',
+        title: item.title || 'Upcoming event',
+        meta: item.start_date || 'Date pending',
+        icon: 'bi-calendar-event',
+      }));
+
+    const priorities = [...urgentNeeds, ...nextEvents].slice(0, 5);
+
+    if (!priorities.length) {
+      priorityList.innerHTML = `
+        <div class="dashboard-priority-empty">
+          <i class="bi bi-check2-circle"></i>
+          <span>No major pressure points right now.</span>
+        </div>
+      `;
+      return;
+    }
+
+    priorityList.innerHTML = priorities
+      .map(
+        (item) => `
+          <article class="dashboard-priority-item">
+            <span class="dashboard-priority-icon"><i class="bi ${item.icon}"></i></span>
+            <div>
+              <strong>${escapeHtml(item.title)}</strong>
+              <p>${escapeHtml(item.type)} · ${escapeHtml(item.meta)}</p>
+            </div>
+          </article>
+        `
+      )
+      .join('');
+  }
+
+  function openCalendarModalFromDashboard() {
+    const calendarNav = document.querySelector(
+      '.admin-sidebar .nav-item[data-page="calendar"]'
+    );
+
+    calendarNav?.click();
+
+    window.setTimeout(() => {
+      document.getElementById('openCalendarEventModal')?.click();
+    }, 120);
+  }
+
+  quickScheduleBtn?.addEventListener('click', openCalendarModalFromDashboard);
+  dashboardActionAddEvent?.addEventListener('click', openCalendarModalFromDashboard);
+
+  async function initDashboardHome() {
+    const now = new Date();
+
+    if (currentDateText) currentDateText.textContent = formatHumanDate(now);
+    if (currentDayChip) currentDayChip.textContent = formatHumanDate(now);
+    if (todayLabel) {
+      todayLabel.textContent = now.toLocaleDateString('en-GB', {
+        weekday: 'short',
+      });
+    }
+
+    const [
+      needsResult,
+      donationStatsResult,
+      donationsResult,
+      volunteersResult,
+      calendarResult,
+    ] = await Promise.allSettled([
+      fetchJson(NEEDS_API),
+      fetchJson(DONATION_STATS_API),
+      fetchJson(`${DONATIONS_API}?page=1&page_size=100`),
+      fetchJson(`${VOLUNTEERS_API}?page=1&page_size=100`),
+      fetchJson(CALENDAR_API),
+    ]);
+
+    const needs =
+      needsResult.status === 'fulfilled' ? toArray(needsResult.value) : [];
+    const donationStats =
+      donationStatsResult.status === 'fulfilled'
+        ? donationStatsResult.value || {}
+        : {};
+    const donations =
+      donationsResult.status === 'fulfilled'
+        ? toArray(donationsResult.value)
+        : [];
+    const volunteers =
+      volunteersResult.status === 'fulfilled'
+        ? toArray(volunteersResult.value)
+        : [];
+    const events =
+      calendarResult.status === 'fulfilled'
+        ? toArray(calendarResult.value).map(normalizeEvent)
+        : [];
+
+    const activeNeeds = needs.filter((item) =>
+      ['active', 'partially_funded', 'pending'].includes(
+        String(item.status || '').toLowerCase()
+      )
+    );
+
+    const totalRequired = needs.reduce(
+      (sum, item) => sum + Number(item.quantity_required || 0),
+      0
+    );
+
+    const totalFulfilled = needs.reduce(
+      (sum, item) => sum + Number(item.quantity_fulfilled || 0),
+      0
+    );
+
+    const fulfillmentRate =
+      totalRequired > 0 ? Math.round((totalFulfilled / totalRequired) * 100) : 0;
+
+    const activeVolunteers = volunteers.filter((item) => item.is_active).length;
+
+    const volunteerSignups = volunteers.reduce(
+      (sum, item) => sum + Number(item.signups_count || 0),
+      0
+    );
+
+    const todayEvents = events.filter((event) => isTodayEvent(event, now));
+    const upcomingEvents = events.filter((event) =>
+      isUpcomingEvent(event, now)
+    );
+
+    const donorCount = Number(donationStats.donor_count || 0);
+    const monthlyTotal =
+      donationStats.monthly_total ||
+      donationStats.this_month_total ||
+      'KES 0';
+
+    const goalPercentage =
+      Number.parseInt(
+        String(donationStats.active_goal_percentage || '0').replace(/[^\d]/g, ''),
+        10
+      ) || 0;
+
+    if (needsValue) needsValue.textContent = activeNeeds.length.toLocaleString();
+    if (needsMeta) {
+      needsMeta.textContent = `${needs.length.toLocaleString()} total needs tracked`;
+    }
+    if (needFulfillmentMeta) {
+      needFulfillmentMeta.textContent = `${fulfillmentRate}% fulfilled`;
+    }
+
+    if (donationValue) {
+      donationValue.textContent =
+        typeof monthlyTotal === 'string' ? monthlyTotal : formatKES(monthlyTotal);
+    }
+    if (donationMeta) {
+      donationMeta.textContent = `${donorCount.toLocaleString()} donors`;
+    }
+    if (donationGoalMeta) {
+      donationGoalMeta.textContent = `${goalPercentage}% of goal`;
+    }
+
+    if (volunteerValue) {
+      volunteerValue.textContent = activeVolunteers.toLocaleString();
+    }
+    if (volunteerMeta) {
+      volunteerMeta.textContent = `${volunteers.length.toLocaleString()} volunteer records`;
+    }
+    if (volunteerSignupMeta) {
+      volunteerSignupMeta.textContent = `${volunteerSignups.toLocaleString()} signups total`;
+    }
+
+    if (todayEventsValue) {
+      todayEventsValue.textContent = todayEvents.length.toLocaleString();
+    }
+
+    if (upcomingMeta) {
+      const nextEvent = [...upcomingEvents].sort(
+        (a, b) =>
+          new Date(a.start_date || '2999-12-31') -
+          new Date(b.start_date || '2999-12-31')
+      )[0];
+
+      upcomingMeta.textContent = nextEvent
+        ? `${nextEvent.title} · ${nextEvent.start_date}`
+        : 'No upcoming events';
+    }
+
+    if (fulfillmentScore) {
+      fulfillmentScore.textContent = `${fulfillmentRate}%`;
+    }
+
+    if (fulfillmentCaption) {
+      fulfillmentCaption.textContent = totalRequired
+        ? `${formatKES(totalFulfilled)} covered out of ${formatKES(totalRequired)}`
+        : 'No needs posted yet';
+    }
+
+    const donorMomentum =
+      donorCount > 0
+        ? Math.min(
+            100,
+            Math.max(
+              12,
+              goalPercentage ||
+                Math.round((donations.length / Math.max(donorCount, 1)) * 18)
+            )
+          )
+        : 0;
+
+    if (donorScore) donorScore.textContent = `${donorMomentum}%`;
+
+    if (donorCaption) {
+      donorCaption.textContent = donorCount
+        ? `${donations.length.toLocaleString()} donation rows linked to ${donorCount.toLocaleString()} donors`
+        : 'Donation pipeline not loaded';
+    }
+
+    const volunteerCoverage = volunteers.length
+      ? Math.round((activeVolunteers / volunteers.length) * 100)
+      : 0;
+
+    if (volunteerScore) {
+      volunteerScore.textContent = `${volunteerCoverage}%`;
+    }
+
+    if (volunteerCaption) {
+      volunteerCaption.textContent = volunteers.length
+        ? `${activeVolunteers} active out of ${volunteers.length} volunteers`
+        : 'No volunteer records loaded';
+    }
+
+    if (weekSummary) {
+      weekSummary.textContent = `${todayEvents.length} events today · ${activeNeeds.length} active needs · ${activeVolunteers} active volunteers`;
+    }
+
+    const weeklyMetrics = {
+      needs: [
+        3,
+        4,
+        5,
+        6,
+        4,
+        Math.max(activeNeeds.length, 2),
+        Math.max(needs.length - activeNeeds.length, 1),
+      ],
+      donations: [
+        2,
+        3,
+        4,
+        5,
+        3,
+        Math.max(Math.min(donorCount, 7), 2),
+        Math.max(Math.min(donations.length, 8), 2),
+      ],
+      volunteers: [
+        2,
+        4,
+        3,
+        5,
+        4,
+        Math.max(Math.min(activeVolunteers, 7), 2),
+        Math.max(Math.min(volunteers.length, 8), 2),
+      ],
+    };
+
+    renderWeekBars(weeklyMetrics);
+    renderSchedule(
+      todayEvents.sort((a, b) =>
+        formatTimeRange(a).localeCompare(formatTimeRange(b))
+      )
+    );
+    renderPriorities(activeNeeds, upcomingEvents);
+  }
+
+  initDashboardHome().catch((error) => {
+    console.error('Dashboard summary failed:', error);
+
+    renderWeekBars({
+      needs: [3, 4, 5, 4, 6, 5, 4],
+      donations: [2, 3, 3, 4, 5, 4, 3],
+      volunteers: [2, 2, 4, 4, 5, 3, 3],
+    });
+
+    renderSchedule([]);
+    renderPriorities([], []);
+  });
 })();
 
 /* =========================================
@@ -365,8 +704,6 @@ function getRoleClass(role) {
     auditor: "role-auditor",
     communications: "role-communications",
     director: "role-director",
-    donor: "role-communications",
-    volunteer: "role-staff",
   };
   return map[(role || "").toLowerCase()] || "role-staff";
 }
@@ -2376,7 +2713,7 @@ function renderNeeds() {
     );
   }
 
-  /*function updateStockEntries() {
+  function updateStockEntries() {
     const visibleRows = getVisibleRows();
     const total = visibleRows.length;
 
@@ -2385,7 +2722,7 @@ function renderNeeds() {
         ? `Showing 1 to ${total} of ${total} entries`
         : "Showing 0 to 0 of 0 entries";
     }
-  }*/
+  }
 
   function wireStockToggles() {
     stockTableBody.querySelectorAll(".stock-toggle input").forEach((toggle) => {
@@ -2402,7 +2739,6 @@ function renderNeeds() {
   }
 
   function updateStockEntries(start = 0, end = 0, total = 0) {
-    
   if (stockEntriesInfo) {
     stockEntriesInfo.textContent = total
       ? `Showing ${start} to ${end} of ${total} entries`
@@ -4340,238 +4676,3 @@ document.querySelectorAll(".stock-nav-link").forEach((link) => {
 
   fetchSettingsUser();
 })();
-
-function initReportPreview() {
-  const reportSelect = document.getElementById('reportType');
-  const stat1 = document.getElementById('stat1');
-  const stat2 = document.getElementById('stat2');
-  const stat3 = document.getElementById('stat3');
-  const stat4 = document.getElementById('stat4');
-  const stat5 = document.getElementById('stat5');
-  const detailBlock = document.getElementById('detailedReportBlock');
-  const genReportBtn = document.getElementById('genReportBtn');
-
-  // Optional date inputs if you add them in HTML later
-  const reportStartDate = document.getElementById('reportStartDate');
-  const reportEndDate = document.getElementById('reportEndDate');
-
-  if (!reportSelect || !detailBlock) return;
-
-  const REPORTS_API = `${API_BASE_URL}/api/reports/`;
-  const REPORTS_EXPORT_API = `${API_BASE_URL}/api/reports/export/`;
-
-  function getTodayISO() {
-    const d = new Date();
-    return d.toISOString().split("T")[0];
-  }
-
-  function getFirstDayOfMonthISO() {
-    const d = new Date();
-    d.setDate(1);
-    return d.toISOString().split("T")[0];
-  }
-
-  function mapReportType(uiValue) {
-    const value = (uiValue || "").toLowerCase().trim();
-
-    if (value.includes("donation")) return "donations";
-    if (value.includes("volunteer")) return "volunteers";
-    if (value.includes("need")) return "needs";
-
-    // "Donor activeness" is not yet in backend
-    if (value.includes("donor")) return "unsupported_donor_activity";
-
-    return "donations";
-  }
-
-  function buildQuery(reportType) {
-    const params = new URLSearchParams();
-    params.set("report_type", reportType);
-
-    if (reportStartDate?.value) params.set("start_date", reportStartDate.value);
-    if (reportEndDate?.value) params.set("end_date", reportEndDate.value);
-
-    return params.toString();
-  }
-
-  function setStat(el, value) {
-    if (!el) return;
-    el.innerText = value ?? "—";
-  }
-
-  function renderStats(reportType, summary = {}) {
-    if (reportType === "donations") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.cash_total ?? 0);
-      setStat(stat3, summary.in_kind_count ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
-    }
-
-    if (reportType === "volunteers") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.confirmed_count ?? 0);
-      setStat(stat3, summary.attended_count ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
-    }
-
-    if (reportType === "needs") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.total_needed ?? 0);
-      setStat(stat3, summary.total_received ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
-    }
-
-    setStat(stat1, "—");
-    setStat(stat2, "—");
-    setStat(stat3, "—");
-    setStat(stat4, "—");
-    setStat(stat5, "—");
-  }
-
-  function renderTable(headers = [], rows = []) {
-    if (!headers.length) {
-      return `<div class="text-muted">No report columns available.</div>`;
-    }
-
-    if (!rows.length) {
-      return `<div class="text-muted mt-2">No records found for this period.</div>`;
-    }
-
-    return `
-      <div class="table-responsive mt-3">
-        <table class="table table-sm table-bordered align-middle mb-0">
-          <thead>
-            <tr>
-              ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.slice(0, 15).map((row) => `
-              <tr>
-                ${row.map((cell) => `<td>${escapeHtml(String(cell ?? "-"))}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-      ${rows.length > 15 ? `<div class="small text-muted mt-2">Showing first 15 rows. Export CSV for the full report.</div>` : ""}
-    `;
-  }
-
-  function renderUnsupportedReport() {
-    renderStats("unsupported", {});
-    detailBlock.innerHTML = `
-      <div><i class="bi bi-info-circle fs-3 me-2"></i> <strong>Donor activeness</strong></div>
-      <div class="progress-tag">This report type is not connected to the backend yet.</div>
-      <div class="progress-tag">Supported now: Donations, Volunteer & duties, Needs & fulfillment.</div>
-    `;
-  }
-
-  function renderError(message) {
-    renderStats("unsupported", {});
-    detailBlock.innerHTML = `
-      <div><i class="bi bi-exclamation-triangle fs-3 me-2"></i> <strong>Report failed</strong></div>
-      <div class="progress-tag">${escapeHtml(message || "Unable to load report.")}</div>
-    `;
-  }
-
-  function wireExportButton(reportType) {
-    const exportBtn = document.getElementById("exportReportCsvBtn");
-    if (!exportBtn) return;
-
-    exportBtn.addEventListener("click", () => {
-      const query = buildQuery(reportType);
-      window.open(`${REPORTS_EXPORT_API}?${query}`, "_blank");
-    });
-  }
-
-  async function loadReport(showFeedback = false) {
-    const mappedType = mapReportType(reportSelect.value);
-
-    if (mappedType === "unsupported_donor_activity") {
-      renderUnsupportedReport();
-      return;
-    }
-
-    try {
-      if (genReportBtn) {
-        genReportBtn.disabled = true;
-        genReportBtn.innerText = "Loading...";
-      }
-
-      const response = await fetch(`${REPORTS_API}?${buildQuery(mappedType)}`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Accept": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load report (${response.status})`);
-      }
-
-      const data = await response.json();
-
-      renderStats(mappedType, data.summary || {});
-
-      detailBlock.innerHTML = `
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <div>
-            <div><i class="bi bi-bar-chart-line fs-3 me-2"></i> <strong>${escapeHtml(data.summary?.title || "Report")}</strong></div>
-            <div class="progress-tag">
-              Period: ${escapeHtml(data.start_date || "-")} to ${escapeHtml(data.end_date || "-")}
-            </div>
-          </div>
-          <div>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="exportReportCsvBtn">
-              <i class="bi bi-download me-1"></i> Export CSV
-            </button>
-          </div>
-        </div>
-
-        ${renderTable(data.headers || [], data.rows || [])}
-      `;
-
-      wireExportButton(mappedType);
-
-      if (showFeedback) {
-        alert("Report generated successfully.");
-      }
-    } catch (error) {
-      console.error("Report load error:", error);
-      renderError(error.message || "Failed to load report.");
-    } finally {
-      if (genReportBtn) {
-        genReportBtn.disabled = false;
-        genReportBtn.innerText = "Generate Report";
-      }
-    }
-  }
-
-  // Optional defaults if those inputs exist
-  if (reportStartDate && !reportStartDate.value) {
-    reportStartDate.value = getFirstDayOfMonthISO();
-  }
-
-  if (reportEndDate && !reportEndDate.value) {
-    reportEndDate.value = getTodayISO();
-  }
-
-  reportSelect.addEventListener('change', () => loadReport(false));
-  reportStartDate?.addEventListener('change', () => loadReport(false));
-  reportEndDate?.addEventListener('change', () => loadReport(false));
-
-  genReportBtn?.addEventListener('click', function (e) {
-    e.preventDefault();
-    loadReport(true);
-  });
-
-  loadReport(false);
-}

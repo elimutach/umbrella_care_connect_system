@@ -74,9 +74,9 @@ class DonorProfile(models.Model):
         related_name="donor_profile",
         db_column="user_id",
     )
-    country = models.CharField(max_length=100, blank=True, null=True)
-    city = models.CharField(max_length=100, blank=True, null=True)
-    gender = models.CharField(max_length=30, blank=True, null=True)
+    country = models.CharField(max_length=120, blank=True, null=True)
+    city = models.CharField(max_length=120, blank=True, null=True)
+    gender = models.CharField(max_length=50, blank=True, null=True)
     donor_type = models.CharField(max_length=50, blank=True, null=True)
     donation_preference = models.CharField(max_length=50, blank=True, null=True)
     donor_note = models.TextField(blank=True, null=True)
@@ -84,6 +84,7 @@ class DonorProfile(models.Model):
     updated_at = models.DateTimeField()
 
     class Meta:
+        managed = False
         db_table = "donor_profile"
         ordering = ["-created_at"]
 
@@ -99,9 +100,9 @@ class VolunteerProfile(models.Model):
         related_name="volunteer_profile",
         db_column="user_id",
     )
-    country = models.CharField(max_length=100, blank=True, null=True)
-    city = models.CharField(max_length=100, blank=True, null=True)
-    gender = models.CharField(max_length=30, blank=True, null=True)
+    country = models.CharField(max_length=120, blank=True, null=True)
+    city = models.CharField(max_length=120, blank=True, null=True)
+    gender = models.CharField(max_length=50, blank=True, null=True)
     skills = models.TextField(blank=True, null=True)
     availability = models.JSONField(default=list, blank=True)
     areas_of_interest = models.JSONField(default=list, blank=True)
@@ -109,6 +110,7 @@ class VolunteerProfile(models.Model):
     updated_at = models.DateTimeField()
 
     class Meta:
+        managed = False
         db_table = "volunteer_profile"
         ordering = ["-created_at"]
 
@@ -144,6 +146,7 @@ class AuthOtp(models.Model):
     used_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
+        managed = False
         db_table = "auth_otps"
         ordering = ["-created_at"]
 
@@ -155,6 +158,7 @@ class AuthSession(models.Model):
     STATUS_CHOICES = [
         ("active", "Active"),
         ("expired", "Expired"),
+        ("used", "Used"),
         ("revoked", "Revoked"),
     ]
 
@@ -178,6 +182,7 @@ class AuthSession(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        managed = False
         db_table = "auth_session"
         ordering = ["-created_at"]
 

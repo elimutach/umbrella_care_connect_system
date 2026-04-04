@@ -23,7 +23,7 @@ connectedCallback(){
     
     <div class="nav-item" data-page="reports"><i class="bi bi-file-earmark-text"></i> Report</div>
     <div class="nav-item" data-page="settings"><i class="bi bi-gear"></i> Setting</div>
-    <div class="nav-item" data-page="privacy"><i class="bi bi-shield-lock"></i> Privacy</div>
+    <div class="nav-item" style="display: none;" data-page="privacy"><i class="bi bi-shield-lock"></i> Privacy</div>
     <!-- theme toggle inside sidebar (optional) -->
     <div style="margin-top: 3rem;">
       <div class="mode-toggle text-center" id="themeToggleSide"><i class="bi bi-palette me-2"></i>light/dark</div>

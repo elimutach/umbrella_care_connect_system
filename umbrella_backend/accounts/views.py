@@ -1,38 +1,30 @@
-from django.shortcuts import render
-from django.utils import timezone
-from django.db.models import Q, F
-from django.contrib.sessions.backends.db import SessionStore
-from django.shortcuts import render, get_object_or_404
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-
-import bcrypt
-import resend
-
-from .models import UserManagement
-from .serializers import UserManagementSerializer
-
 import hashlib
 import hmac
 import secrets
 import string
-import uuid
 from datetime import timedelta
 
-from django.conf import settings
-from django.db import transaction, connection
-from django.db.models import Q
-from django.utils import timezone
+import bcrypt
+import resend
 
-from rest_framework.views import APIView
+from django.conf import settings
+from django.db import transaction
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
+
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import UserManagement, DonorProfile, VolunteerProfile, AuthOtp, AuthSession
+from .serializers import UserManagementSerializer
 
 
+OTP_LIFETIME_MINUTES = 15
+SESSION_LIFETIME_MINUTES = 30
+SESSION_TOKEN_LENGTH = 16
 
 
 # =========================
@@ -45,16 +37,214 @@ def index_page(request):
 def signin_page(request):
     return render(request, "signin.html")
 
+
 def signup_page(request):
     return render(request, "signup.html")
 
 
+def admin_signin_page(request):
+    return render(request, "admin-signin.html")
 
-from django.views.decorators.csrf import ensure_csrf_cookie
+
+def admin_otp_page(request):
+    return render(request, "admin-otp.html")
+
 
 @ensure_csrf_cookie
 def dashboard_view(request):
-    return render(request, "dashboard.html")
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return redirect("signin")
+
+    user = UserManagement.objects.filter(id=user_id, is_active=True).first()
+    if not user:
+        request.session.flush()
+        return redirect("signin")
+
+    return render(request, "dashboard.html", {"current_user": user})
+
+
+# =========================
+# HELPERS
+# =========================
+def _hash_value(raw_value: str) -> str:
+    secret = (getattr(settings, "SECRET_KEY", "") or "fallback-secret").encode("utf-8")
+    return hmac.new(secret, raw_value.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _generate_otp_code() -> str:
+    return "".join(secrets.choice(string.digits) for _ in range(6))
+
+
+def _generate_session_token(length: int = SESSION_TOKEN_LENGTH) -> str:
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def _generate_reg_code(first_name: str, role: str) -> str:
+    return "UCC" + "".join(secrets.choice(string.digits) for _ in range(4)) + "/" + (first_name[:1] or "U").upper() + (role[:1] or "D").upper()
+
+
+def _generate_unique_reg_code(first_name: str, role: str) -> str:
+    while True:
+        code = _generate_reg_code(first_name, role)
+        if not UserManagement.objects.filter(reg_code=code).exists():
+            return code
+
+
+def _get_dashboard_redirect_for_user(user) -> str:
+    # Change these if you later create dedicated donor/volunteer dashboard URLs.
+    if user.role == "admin":
+        return "/dashboard/"
+    if user.role == "donor":
+        return "/dashboard/"
+    if user.role == "volunteer":
+        return "/dashboard/"
+    return "/dashboard/"
+
+
+def _send_email_otp(email: str, code: str, purpose: str):
+    api_key = getattr(settings, "RESEND_API_KEY", "") or ""
+    from_email = getattr(
+        settings,
+        "RESEND_FROM_EMAIL",
+        "Umbrella Care Connect <onboarding@resend.dev>",
+    )
+
+    if not api_key:
+        return False, "RESEND_API_KEY is missing."
+
+    resend.api_key = api_key
+
+    subject_map = {
+        "login": "Your Umbrella Care Connect sign-in code",
+        "email_verification": "Verify your Umbrella Care Connect email",
+        "password_reset": "Your password reset code",
+    }
+
+    action_map = {
+        "login": "sign in",
+        "email_verification": "verify your email",
+        "password_reset": "reset your password",
+    }
+
+    subject = subject_map.get(purpose, "Your Umbrella Care Connect code")
+    action = action_map.get(purpose, "continue")
+
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#fffdf8;color:#1f2a3a">
+      <h2 style="margin:0 0 12px;color:#1f2a3a;">Umbrella Care Connect</h2>
+      <p style="font-size:16px;line-height:1.7;">Use the code below to {action}.</p>
+      <div style="margin:24px 0;padding:18px 20px;background:#fff1d5;border-radius:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:800;letter-spacing:10px;color:#835500;">{code}</div>
+      </div>
+      <p style="font-size:14px;line-height:1.7;color:#6f7785;">This code expires in 15 minutes. Ignore this email if this was not you.</p>
+    </div>
+    """
+
+    try:
+        resend.Emails.send({
+            "from": from_email,
+            "to": [email],
+            "subject": subject,
+            "html": html,
+        })
+        return True, None
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _deactivate_existing_otps(user, purpose):
+    AuthOtp.objects.filter(
+        user=user,
+        purpose=purpose,
+        is_active=True,
+        used_at__isnull=True,
+    ).update(
+        is_active=False,
+        updated_at=timezone.now(),
+    )
+
+
+def _create_otp(user, purpose):
+    _deactivate_existing_otps(user, purpose)
+
+    code = _generate_otp_code()
+    now = timezone.now()
+
+    otp = AuthOtp.objects.create(
+        user=user,
+        purpose=purpose,
+        otp_hash=_hash_value(code),
+        email_snapshot=user.email,
+        code_last2=code[-2:],
+        attempts=0,
+        max_attempts=5,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+        expires_at=now + timedelta(minutes=OTP_LIFETIME_MINUTES),
+        used_at=None,
+    )
+
+    sent, error = _send_email_otp(user.email, code, purpose)
+    if not sent:
+        otp.is_active = False
+        otp.updated_at = now
+        otp.save(update_fields=["is_active", "updated_at"])
+        return None, error
+
+    return otp, None
+
+
+def _expire_user_sessions(user):
+    now = timezone.now()
+    active_sessions = AuthSession.objects.filter(user=user, is_active=True)
+
+    for session in active_sessions:
+        session.is_active = False
+        session.status = "expired"
+        session.ended_at = now
+        session.active_duration_seconds = int((now - session.created_at).total_seconds())
+        session.save(update_fields=["is_active", "status", "ended_at", "active_duration_seconds"])
+
+
+def _create_session_for_user(user, request):
+    _expire_user_sessions(user)
+
+    token = _generate_session_token(SESSION_TOKEN_LENGTH)
+    now = timezone.now()
+
+    auth_session = AuthSession.objects.create(
+        user=user,
+        session_key_hash=_hash_value(token),
+        token_hint=token[-4:],
+        status="active",
+        is_active=True,
+        created_at=now,
+        last_seen_at=now,
+        expires_at=now + timedelta(minutes=SESSION_LIFETIME_MINUTES),
+        ended_at=None,
+        active_duration_seconds=0,
+        metadata={
+            "ip": request.META.get("REMOTE_ADDR"),
+            "user_agent": request.META.get("HTTP_USER_AGENT", ""),
+        },
+    )
+
+    user.current_session_key = str(auth_session.session_request_token)
+    user.last_seen = now
+    user.sign_in_count = (user.sign_in_count or 0) + 1
+    user.updated_at = now
+    user.save(update_fields=["current_session_key", "last_seen", "sign_in_count", "updated_at"])
+
+    request.session["user_id"] = str(user.id)
+    request.session["auth_session_request_token"] = str(auth_session.session_request_token)
+    request.session["session_token_hint"] = auth_session.token_hint
+    request.session["role"] = user.role
+    request.session.set_expiry(SESSION_LIFETIME_MINUTES * 60)
+
+    return auth_session
 
 
 # =========================
@@ -138,7 +328,6 @@ class UserDetailAPIView(APIView):
 
     def patch(self, request, user_id):
         user = get_object_or_404(UserManagement, id=user_id, is_active=True)
-
         serializer = UserManagementSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             updated_user = serializer.save()
@@ -147,10 +336,12 @@ class UserDetailAPIView(APIView):
 
     def delete(self, request, user_id):
         user = get_object_or_404(UserManagement, id=user_id, is_active=True)
+        now = timezone.now()
 
         user.is_active = False
         user.status = "terminated"
-        user.terminated_at = timezone.now()
+        user.terminated_at = now
+        user.updated_at = now
         user.save(update_fields=["is_active", "status", "terminated_at", "updated_at"])
 
         return Response({"message": "User deleted successfully"})
@@ -162,12 +353,15 @@ class UserFreezeAPIView(APIView):
 
     def patch(self, request, user_id):
         user = get_object_or_404(UserManagement, id=user_id, is_active=True)
+        now = timezone.now()
 
         user.status = "paused"
-        user.suspended_at = timezone.now()
+        user.suspended_at = now
+        user.updated_at = now
         user.save(update_fields=["status", "suspended_at", "updated_at"])
 
         return Response({"message": "User paused successfully"})
+
 
 class UserChangePasswordAPIView(APIView):
     permission_classes = [AllowAny]
@@ -204,157 +398,9 @@ class UserChangePasswordAPIView(APIView):
         return Response({"message": "Password updated successfully."}, status=200)
 
 
-
-
-
-OTP_LIFETIME_MINUTES = 15
-SESSION_LIFETIME_MINUTES = 30
-SESSION_TOKEN_LENGTH = 16
-
-
-def _hash_value(raw_value: str) -> str:
-    secret = (getattr(settings, "SECRET_KEY", "") or "fallback-secret").encode("utf-8")
-    return hmac.new(secret, raw_value.encode("utf-8"), hashlib.sha256).hexdigest()
-
-
-def _generate_otp_code() -> str:
-    return "".join(secrets.choice(string.digits) for _ in range(6))
-
-
-def _generate_session_token(length: int = SESSION_TOKEN_LENGTH) -> str:
-    alphabet = string.ascii_letters + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(length))
-
-
-def _generate_reg_code(first_name: str, role: str) -> str:
-    return "UCC" + "".join(secrets.choice(string.digits) for _ in range(4)) + "/" + (first_name[:1] or "U").upper() + (role[:1] or "D").upper()
-
-
-def _send_email_otp(email: str, code: str, purpose: str) -> None:
-    api_key = getattr(settings, "RESEND_API_KEY", "") or ""
-    from_email = getattr(
-        settings,
-        "RESEND_FROM_EMAIL",
-        "Umbrella Care Connect <noreply@umbrella.kyfaru.com>",
-    )
-
-    if not api_key:
-        print("RESEND_API_KEY is missing; OTP email not sent.")
-        return
-
-    resend.api_key = api_key
-
-    subject_map = {
-        "login": "Your Umbrella Care Connect sign-in code",
-        "email_verification": "Verify your Umbrella Care Connect email",
-        "password_reset": "Your password reset code",
-    }
-
-    action_map = {
-        "login": "sign in",
-        "email_verification": "verify your email",
-        "password_reset": "reset your password",
-    }
-
-    subject = subject_map.get(purpose, "Your Umbrella Care Connect code")
-    action = action_map.get(purpose, "continue")
-
-    html = f"""
-    <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#fffdf8;color:#1f2a3a">
-      <h2 style="margin:0 0 12px;color:#1f2a3a;">Umbrella Care Connect</h2>
-      <p style="font-size:16px;line-height:1.7;">Use the code below to {action}.</p>
-      <div style="margin:24px 0;padding:18px 20px;background:#fff1d5;border-radius:16px;text-align:center;">
-        <div style="font-size:32px;font-weight:800;letter-spacing:10px;color:#835500;">{code}</div>
-      </div>
-      <p style="font-size:14px;line-height:1.7;color:#6f7785;">This code expires in 15 minutes. Ignore this email if this was not you.</p>
-    </div>
-    """
-
-    try:
-        resend.Emails.send({
-            "from": from_email,
-            "to": [email],
-            "subject": subject,
-            "html": html,
-        })
-    except Exception as exc:
-        print(f"Failed to send OTP email via Resend: {exc}")
-
-
-def _deactivate_existing_otps(user, purpose):
-    AuthOtp.objects.filter(
-        user=user,
-        purpose=purpose,
-        is_active=True,
-        used_at__isnull=True
-    ).update(is_active=False, updated_at=timezone.now())
-
-
-def _create_otp(user, purpose):
-    _deactivate_existing_otps(user, purpose)
-
-    code = _generate_otp_code()
-    now = timezone.now()
-    otp = AuthOtp.objects.create(
-        user=user,
-        purpose=purpose,
-        otp_hash=_hash_value(code),
-        email_snapshot=user.email,
-        code_last2=code[-2:],
-        expires_at=now + timedelta(minutes=OTP_LIFETIME_MINUTES),
-        created_at=now,
-        updated_at=now,
-    )
-    _send_email_otp(user.email, code, purpose)
-    return otp
-
-
-def _expire_user_sessions(user):
-    now = timezone.now()
-    active_sessions = AuthSession.objects.filter(user=user, is_active=True)
-    for session in active_sessions:
-        session.is_active = False
-        session.status = "expired"
-        session.ended_at = now
-        session.active_duration_seconds = int((now - session.created_at).total_seconds())
-        session.save(update_fields=["is_active", "status", "ended_at", "active_duration_seconds"])
-
-
-def _create_session_for_user(user, request):
-    _expire_user_sessions(user)
-
-    token = _generate_session_token(SESSION_TOKEN_LENGTH)
-    now = timezone.now()
-
-    auth_session = AuthSession.objects.create(
-        user=user,
-        session_key_hash=_hash_value(token),
-        token_hint=token[-4:],
-        status="active",
-        is_active=True,
-        created_at=now,
-        last_seen_at=now,
-        expires_at=now + timedelta(minutes=SESSION_LIFETIME_MINUTES),
-        metadata={
-            "ip": request.META.get("REMOTE_ADDR"),
-            "user_agent": request.META.get("HTTP_USER_AGENT", ""),
-        },
-    )
-
-    user.current_session_key = auth_session.session_request_token.hex
-    user.last_seen = now
-    user.sign_in_count = (user.sign_in_count or 0) + 1
-    user.updated_at = now
-    user.save(update_fields=["current_session_key", "last_seen", "sign_in_count", "updated_at"])
-
-    request.session["user_id"] = str(user.id)
-    request.session["auth_session_request_token"] = str(auth_session.session_request_token)
-    request.session["session_token"] = token
-    request.session.set_expiry(SESSION_LIFETIME_MINUTES * 60)
-
-    return auth_session, token
-
-
+# =========================
+# AUTH - SIGNUP
+# =========================
 class AuthSignupAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -367,8 +413,10 @@ class AuthSignupAPIView(APIView):
             return Response({"message": "Invalid role selected."}, status=400)
 
         first_name = (data.get("first_name") or "").strip()
+        last_name = (data.get("last_name") or "").strip()
         username = (data.get("username") or "").strip()
         email = (data.get("email") or "").strip().lower()
+        phone = (data.get("phone") or "").strip()
         password = (data.get("password") or "")
         confirm_password = (data.get("confirm_password") or "")
 
@@ -390,17 +438,23 @@ class AuthSignupAPIView(APIView):
         with transaction.atomic():
             user = UserManagement.objects.create(
                 first_name=first_name,
-                last_name=(data.get("last_name") or "").strip() or None,
-                full_name=f"{first_name} {(data.get('last_name') or '').strip()}".strip(),
+                last_name=last_name or None,
+                full_name=f"{first_name} {last_name}".strip(),
                 username=username,
                 email=email,
-                phone=(data.get("phone") or "").strip() or None,
+                phone=phone or None,
                 password_hash=password_hash,
-                reg_code=_generate_reg_code(first_name, role),
+                reg_code=_generate_unique_reg_code(first_name, role),
                 role=role,
                 status="paused",
                 verified=False,
                 is_active=True,
+                current_session_key=None,
+                last_seen=None,
+                sign_in_count=0,
+                forgot_password_change_count=0,
+                suspended_at=None,
+                terminated_at=None,
                 created_at=now,
                 updated_at=now,
                 verified_at=None,
@@ -437,7 +491,9 @@ class AuthSignupAPIView(APIView):
                     updated_at=now,
                 )
 
-            otp = _create_otp(user, "email_verification")
+        otp, error = _create_otp(user, "email_verification")
+        if not otp:
+            return Response({"message": f"Account created, but verification OTP could not be sent: {error}"}, status=500)
 
         return Response({
             "message": f"We sent a 6-digit verification code to {user.email}. Verify your email before signing in.",
@@ -523,7 +579,9 @@ class AuthSignupResendVerificationOtpAPIView(APIView):
         if user.verified:
             return Response({"message": "This email is already verified."}, status=400)
 
-        otp = _create_otp(user, "email_verification")
+        otp, error = _create_otp(user, "email_verification")
+        if not otp:
+            return Response({"message": f"Could not resend verification OTP: {error}"}, status=500)
 
         return Response({
             "message": f"A new verification code was sent to {user.email}.",
@@ -532,6 +590,9 @@ class AuthSignupResendVerificationOtpAPIView(APIView):
         })
 
 
+# =========================
+# AUTH - USER SIGNIN
+# =========================
 class AuthSigninRequestOtpAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -544,9 +605,15 @@ class AuthSigninRequestOtpAPIView(APIView):
             return Response({"message": "Login and password are required."}, status=400)
 
         try:
-            user = UserManagement.objects.get(Q(email__iexact=login) | Q(username__iexact=login), is_active=True)
+            user = UserManagement.objects.get(
+                Q(email__iexact=login) | Q(username__iexact=login),
+                is_active=True,
+            )
         except UserManagement.DoesNotExist:
             return Response({"message": "Invalid credentials."}, status=400)
+
+        if user.role == "admin":
+            return Response({"message": "Use the admin sign-in page for administrator access."}, status=403)
 
         try:
             is_valid = bcrypt.checkpw(password.encode("utf-8"), (user.password_hash or "").encode("utf-8"))
@@ -562,7 +629,9 @@ class AuthSigninRequestOtpAPIView(APIView):
         if user.status != "active":
             return Response({"message": "This account is not active."}, status=403)
 
-        otp = _create_otp(user, "login")
+        otp, error = _create_otp(user, "login")
+        if not otp:
+            return Response({"message": f"OTP email could not be sent: {error}"}, status=500)
 
         return Response({
             "message": f"We sent a 6-digit sign-in code to {user.email}.",
@@ -577,18 +646,30 @@ class AuthSigninResendOtpAPIView(APIView):
 
     def post(self, request):
         login = (request.data.get("login") or "").strip()
+
         if not login:
             return Response({"message": "Login is required."}, status=400)
 
         try:
-            user = UserManagement.objects.get(Q(email__iexact=login) | Q(username__iexact=login), is_active=True)
+            user = UserManagement.objects.get(
+                Q(email__iexact=login) | Q(username__iexact=login),
+                is_active=True,
+            )
         except UserManagement.DoesNotExist:
             return Response({"message": "User not found."}, status=404)
+
+        if user.role == "admin":
+            return Response({"message": "Use the admin sign-in page for administrator access."}, status=403)
 
         if not user.verified:
             return Response({"message": "Verify your email first."}, status=403)
 
-        otp = _create_otp(user, "login")
+        if user.status != "active":
+            return Response({"message": "This account is not active."}, status=403)
+
+        otp, error = _create_otp(user, "login")
+        if not otp:
+            return Response({"message": f"Could not resend OTP: {error}"}, status=500)
 
         return Response({
             "message": f"A new sign-in code was sent to {user.email}.",
@@ -644,36 +725,19 @@ class AuthSigninVerifyOtpAPIView(APIView):
         otp.updated_at = now
         otp.save(update_fields=["is_active", "used_at", "updated_at"])
 
-        auth_session, session_token = _create_session_for_user(otp.user, request)
+        auth_session = _create_session_for_user(otp.user, request)
 
         return Response({
             "message": "Sign in successful.",
-            "redirect_url": "/dashboard/",
+            "redirect_url": _get_dashboard_redirect_for_user(otp.user),
             "session_request_token": str(auth_session.session_request_token),
             "session_token_hint": auth_session.token_hint,
         })
 
 
-        from django.shortcuts import render
-from django.utils import timezone
-from django.db.models import Q
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-
-from .models import UserManagement, AuthOtp
-
-import bcrypt
-
-
-def admin_signin_page(request):
-    return render(request, "admin-signin.html")
-
-
-def admin_otp_page(request):
-    return render(request, "admin-otp.html")
-
-
+# =========================
+# AUTH - ADMIN SIGNIN
+# =========================
 class AdminSigninRequestOtpAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -708,7 +772,9 @@ class AdminSigninRequestOtpAPIView(APIView):
         if user.status != "active":
             return Response({"message": "This admin account is not active."}, status=403)
 
-        otp = _create_otp(user, "login")
+        otp, error = _create_otp(user, "login")
+        if not otp:
+            return Response({"message": f"Admin OTP email could not be sent: {error}"}, status=500)
 
         return Response({
             "message": f"A 6-digit verification code was sent to {user.email}.",
@@ -803,7 +869,9 @@ class AdminSigninResendOtpAPIView(APIView):
         if user.status != "active":
             return Response({"message": "This admin account is not active."}, status=403)
 
-        otp = _create_otp(user, "login")
+        otp, error = _create_otp(user, "login")
+        if not otp:
+            return Response({"message": f"Could not resend admin OTP: {error}"}, status=500)
 
         return Response({
             "message": f"A fresh admin OTP was sent to {user.email}.",

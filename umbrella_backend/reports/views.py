@@ -1,28 +1,13 @@
 import csv
 from datetime import datetime, date
 
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Sum
+from django.db.models import Sum, DecimalField, Value
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse, HttpResponse
 
 from donations.models import Donation
 from needs.models import NeedRecord
 from volunteers.models import VolunteerSignup
-
-
-def is_admin_user(user):
-    return (
-        getattr(user, "is_staff", False)
-        or getattr(user, "is_superuser", False)
-        or getattr(user, "role", "") == "admin"
-    )
-
-
-def admin_required(view_func):
-    return login_required(
-        user_passes_test(is_admin_user, login_url="/accounts/login/")(view_func)
-    )
 
 
 def parse_date_range(request):
@@ -60,8 +45,11 @@ def build_donations_report(start_date, end_date):
         "title": "Donations Report",
         "count": qs.count(),
         "cash_total": qs.filter(donation_type="cash").aggregate(
-            total=Coalesce(Sum("amount"), 0)
-        )["total"],
+    total=Coalesce(
+        Sum("amount", output_field=DecimalField(max_digits=12, decimal_places=2)),
+        Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)),
+    )
+)["total"],
         "in_kind_count": qs.filter(donation_type="in_kind").count(),
     }
 
@@ -104,8 +92,19 @@ def build_needs_report(start_date, end_date):
     summary = {
         "title": "Needs Report",
         "count": qs.count(),
-        "total_needed": qs.aggregate(total=Coalesce(Sum("amount_needed"), 0))["total"],
-        "total_received": qs.aggregate(total=Coalesce(Sum("amount_received"), 0))["total"],
+        "total_needed": qs.aggregate(
+    total=Coalesce(
+        Sum("amount_needed", output_field=DecimalField(max_digits=12, decimal_places=2)),
+        Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)),
+    )
+)["total"],
+
+"total_received": qs.aggregate(
+    total=Coalesce(
+        Sum("amount_received", output_field=DecimalField(max_digits=12, decimal_places=2)),
+        Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)),
+    )
+)["total"],
     }
 
     headers = [
@@ -181,7 +180,6 @@ def get_report_data(report_type, start_date, end_date):
     return build_donations_report(start_date, end_date)
 
 
-@admin_required
 def report_data_api(request):
     report_type = request.GET.get("report_type", "donations")
     start_date, end_date = parse_date_range(request)
@@ -198,7 +196,6 @@ def report_data_api(request):
     })
 
 
-@admin_required
 def report_export_csv(request):
     report_type = request.GET.get("report_type", "donations")
     start_date, end_date = parse_date_range(request)

@@ -144,3 +144,11 @@ DATABASES = {
         "PORT": "5432",
     }
 }
+
+import os
+
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.getenv(
+    "RESEND_FROM_EMAIL",
+    "Umbrella Care Connect <noreply@umbrella.kyfaru.com>"
+)

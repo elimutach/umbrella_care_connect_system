@@ -58,5 +58,128 @@ class UserManagement(models.Model):
     def is_authenticated(self):
         return True
 
+    def save(self, *args, **kwargs):
+        self.full_name = f"{self.first_name or ''} {self.last_name or ''}".strip()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.username
+
+
+class DonorProfile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        UserManagement,
+        on_delete=models.CASCADE,
+        related_name="donor_profile",
+        db_column="user_id",
+    )
+    country = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    gender = models.CharField(max_length=30, blank=True, null=True)
+    donor_type = models.CharField(max_length=50, blank=True, null=True)
+    donation_preference = models.CharField(max_length=50, blank=True, null=True)
+    donor_note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "donor_profile"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"DonorProfile({self.user.username})"
+
+
+class VolunteerProfile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        UserManagement,
+        on_delete=models.CASCADE,
+        related_name="volunteer_profile",
+        db_column="user_id",
+    )
+    country = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    gender = models.CharField(max_length=30, blank=True, null=True)
+    skills = models.TextField(blank=True, null=True)
+    availability = models.JSONField(default=list, blank=True)
+    areas_of_interest = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "volunteer_profile"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"VolunteerProfile({self.user.username})"
+
+
+class AuthOtp(models.Model):
+    PURPOSE_CHOICES = [
+        ("login", "Login"),
+        ("email_verification", "Email Verification"),
+        ("password_reset", "Password Reset"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    otp_request_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    user = models.ForeignKey(
+        UserManagement,
+        on_delete=models.CASCADE,
+        related_name="auth_otps",
+        db_column="user_id",
+    )
+    purpose = models.CharField(max_length=40, choices=PURPOSE_CHOICES)
+    otp_hash = models.CharField(max_length=255)
+    email_snapshot = models.EmailField(max_length=255, blank=True, null=True)
+    code_last2 = models.CharField(max_length=2, blank=True, null=True)
+    attempts = models.IntegerField(default=0)
+    max_attempts = models.IntegerField(default=5)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = "auth_otps"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.purpose}"
+
+
+class AuthSession(models.Model):
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("expired", "Expired"),
+        ("revoked", "Revoked"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session_request_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    user = models.ForeignKey(
+        UserManagement,
+        on_delete=models.CASCADE,
+        related_name="auth_sessions",
+        db_column="user_id",
+    )
+    session_key_hash = models.CharField(max_length=255)
+    token_hint = models.CharField(max_length=10, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField()
+    last_seen_at = models.DateTimeField(blank=True, null=True)
+    expires_at = models.DateTimeField()
+    ended_at = models.DateTimeField(blank=True, null=True)
+    active_duration_seconds = models.IntegerField(default=0)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "auth_session"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.status}"

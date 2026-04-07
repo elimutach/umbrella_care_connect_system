@@ -1,9 +1,18 @@
 from django.urls import path
 from .views import (
+    CurrentUserAPIView,
     index_page,
     signin_page,
     signup_page,
+    contact_page,
+    volunteer_page,
+    need_details_page,
+    donate_page,
+    pledge_page,
     dashboard_view,
+    admin_dashboard_view,
+    donor_dashboard_view,
+    volunteer_dashboard_view,
     UserListCreateAPIView,
     UserDetailAPIView,
     UserFreezeAPIView,
@@ -11,6 +20,8 @@ from .views import (
     AuthSignupAPIView,
     AuthSignupVerifyEmailAPIView,
     AuthSignupResendVerificationOtpAPIView,
+    ContactMessageAPIView,
+    AuthLogoutAPIView,
     AuthSigninRequestOtpAPIView,
     AuthSigninVerifyOtpAPIView,
     AuthSigninResendOtpAPIView,
@@ -25,7 +36,17 @@ urlpatterns = [
     path("", index_page, name="index"),
     path("signin/", signin_page, name="signin"),
     path("signup/", signup_page, name="signup"),
+    path("contact/", contact_page, name="contact"),
+    path("volunteer/", volunteer_page, name="volunteer"),
+    path("need-details/", need_details_page, name="need-details"),
+    path("donate/", donate_page, name="donate"),
+    path("pledge/", pledge_page, name="pledge"),
+
     path("dashboard/", dashboard_view, name="dashboard"),
+    path("admin/dashboard/", admin_dashboard_view, name="admin-dashboard"),
+    path("donor/dashboard/", donor_dashboard_view, name="donor-dashboard"),
+    path("volunteer/dashboard/", volunteer_dashboard_view, name="volunteer-dashboard"),
+
 
     path("api/users/", UserListCreateAPIView.as_view(), name="api-users"),
     path("api/users/<uuid:user_id>/", UserDetailAPIView.as_view(), name="api-user-detail"),
@@ -35,6 +56,8 @@ urlpatterns = [
     path("api/auth/signup/", AuthSignupAPIView.as_view(), name="api-auth-signup"),
     path("api/auth/signup/verify-email/", AuthSignupVerifyEmailAPIView.as_view(), name="api-auth-signup-verify-email"),
     path("api/auth/signup/resend-verification-otp/", AuthSignupResendVerificationOtpAPIView.as_view(), name="api-auth-signup-resend-verification-otp"),
+    path("api/contact/", ContactMessageAPIView.as_view(), name="api-contact"),
+    path("api/auth/logout/", AuthLogoutAPIView.as_view(), name="api-auth-logout"),
 
     path("api/auth/signin/request-otp/", AuthSigninRequestOtpAPIView.as_view(), name="api-auth-signin-request-otp"),
     path("api/auth/signin/verify-otp/", AuthSigninVerifyOtpAPIView.as_view(), name="api-auth-signin-verify-otp"),
@@ -43,6 +66,8 @@ urlpatterns = [
     path("admin-signin/", admin_signin_page, name="admin-signin"),
     path("admin-otp/", admin_otp_page, name="admin-otp"),
     path("api/admin-auth/signin/request-otp/", AdminSigninRequestOtpAPIView.as_view(), name="api-admin-signin-request-otp"),
-    path("api/admin-auth/signin/verify-otp/", AdminSigninVerifyOtpAPIView.as_view(), name="api-admin-signin-verify-otp"),
+    path("api/admin-auth/signin/verify-otp/", AdminSigninVerifyOtpAPIView.as_view(), name="api-admin-auth-signin-verify-otp"),
     path("api/admin-auth/signin/resend-otp/", AdminSigninResendOtpAPIView.as_view(), name="api-admin-signin-resend-otp"),
+
+    path("api/me/", CurrentUserAPIView.as_view(), name="api-me"),
 ]

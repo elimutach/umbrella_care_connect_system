@@ -61,7 +61,6 @@ class UserManagementSerializer(serializers.ModelSerializer):
         ).decode("utf-8")
         validated_data["created_at"] = now
         validated_data["updated_at"] = now
-        validated_data["full_name"] = f'{validated_data.get("first_name", "").strip()} {validated_data.get("last_name", "").strip()}'.strip()
         validated_data["reg_code"] = reg_code
 
         return UserManagement.objects.create(**validated_data)
@@ -71,8 +70,6 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
-        instance.full_name = f'{instance.first_name.strip()} {(instance.last_name or "").strip()}'.strip()
 
         if password:
             import bcrypt

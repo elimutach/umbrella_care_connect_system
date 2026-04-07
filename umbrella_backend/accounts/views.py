@@ -2,24 +2,31 @@ import hashlib
 import hmac
 import secrets
 import string
+from html import escape
 from datetime import timedelta
 
 import bcrypt
 import resend
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 
 from .models import UserManagement, DonorProfile, VolunteerProfile, AuthOtp, AuthSession
 from .serializers import UserManagementSerializer
+from .authentication import DashboardSessionAuthentication
+
 
 
 OTP_LIFETIME_MINUTES = 15
@@ -42,26 +49,116 @@ def signup_page(request):
     return render(request, "signup.html")
 
 
+def contact_page(request):
+    return render(request, "contact.html")
+
+
+def volunteer_page(request):
+    return render(request, "volunteer.html")
+
+
+def need_details_page(request):
+    return render(request, "need-details.html")
+
+
+def donate_page(request):
+    return render(request, "donate.html")
+
+
+def pledge_page(request):
+    return render(request, "pledge.html")
+
+
 def admin_signin_page(request):
-    return render(request, "admin-signin.html")
+    return render(request, "admin/admin-signin.html")
 
 
 def admin_otp_page(request):
-    return render(request, "admin-otp.html")
+    return render(request, "admin/admin-otp.html")
 
 
-@ensure_csrf_cookie
-def dashboard_view(request):
+def _get_session_user(request):
     user_id = request.session.get("user_id")
     if not user_id:
-        return redirect("signin")
+        return None
 
-    user = UserManagement.objects.filter(id=user_id, is_active=True).first()
-    if not user:
+    try:
+        user = UserManagement.objects.get(id=user_id, is_active=True)
+    except UserManagement.DoesNotExist:
+        return None
+
+    auth_session = _get_active_auth_session(request, user)
+    if not auth_session:
         request.session.flush()
+        return None
+
+    return user
+
+
+@never_cache
+@ensure_csrf_cookie
+def dashboard_view(request):
+    user = _get_session_user(request)
+    if not user:
         return redirect("signin")
 
-    return render(request, "dashboard.html", {"current_user": user})
+    return redirect(_get_dashboard_redirect_for_user(user))
+
+
+def _require_role(request, *allowed_roles):
+    user = _get_session_user(request)
+
+    if not user:
+        return None, redirect("signin")
+
+    if user.role not in allowed_roles:
+        return user, redirect(_get_dashboard_redirect_for_user(user))
+
+    return user, None
+
+@never_cache
+@ensure_csrf_cookie
+def admin_dashboard_view(request):
+    user, response = _require_role(request, "admin")
+    if response:
+        return response
+    return render(request, "admin/dashboard.html", {"current_user": user})
+
+@never_cache
+@ensure_csrf_cookie
+def donor_dashboard_view(request):
+    user, response = _require_role(request, "donor")
+    if response:
+        return response
+    return render(request, "donor/dashboard.html", {"current_user": user})
+
+@never_cache
+@ensure_csrf_cookie
+def volunteer_dashboard_view(request):
+    user, response = _require_role(request, "volunteer")
+    if response:
+        return response
+    return render(request, "volunteer/dashboard.html", {"current_user": user})
+
+
+# =========================
+# HELPERS
+# =========================
+def _get_dashboard_redirect_for_user(user=None) -> str:
+    if not user:
+        return "/signin/"
+
+    role = (user.role or "").strip().lower()
+
+    if role == "admin":
+        return "/admin/dashboard/"
+    if role == "donor":
+        return "/donor/dashboard/"
+    if role == "volunteer":
+        return "/volunteer/dashboard/"
+
+    return "/signin/"
+
 
 
 # =========================
@@ -81,6 +178,24 @@ def _generate_session_token(length: int = SESSION_TOKEN_LENGTH) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
+def _get_active_auth_session(request, user=None):
+    session_request_token = request.session.get("auth_session_request_token")
+    if not session_request_token:
+        return None
+
+    queryset = AuthSession.objects.filter(
+        session_request_token=session_request_token,
+        status="active",
+        is_active=True,
+        expires_at__gt=timezone.now(),
+    )
+
+    if user is not None:
+        queryset = queryset.filter(user=user)
+
+    return queryset.first()
+
+
 def _generate_reg_code(first_name: str, role: str) -> str:
     return "UCC" + "".join(secrets.choice(string.digits) for _ in range(4)) + "/" + (first_name[:1] or "U").upper() + (role[:1] or "D").upper()
 
@@ -92,15 +207,6 @@ def _generate_unique_reg_code(first_name: str, role: str) -> str:
             return code
 
 
-def _get_dashboard_redirect_for_user(user) -> str:
-    # Change these if you later create dedicated donor/volunteer dashboard URLs.
-    if user.role == "admin":
-        return "/dashboard/"
-    if user.role == "donor":
-        return "/dashboard/"
-    if user.role == "volunteer":
-        return "/dashboard/"
-    return "/dashboard/"
 
 
 def _send_email_otp(email: str, code: str, purpose: str):
@@ -152,6 +258,115 @@ def _send_email_otp(email: str, code: str, purpose: str):
         return True, None
     except Exception as exc:
         return False, str(exc)
+
+
+def _clean_contact_field(value, max_length):
+    cleaned = " ".join(str(value or "").strip().split())
+    return cleaned[:max_length]
+
+
+def _contact_email_shell(title, preheader, body_html):
+    return f"""
+    <div style="margin:0;padding:32px;background:#050b18;color:#eef6ff;font-family:Inter,Arial,sans-serif;">
+      <div style="display:none;max-height:0;overflow:hidden;">{escape(preheader)}</div>
+      <div style="max-width:680px;margin:0 auto;border:1px solid rgba(128,255,255,0.24);border-radius:28px;overflow:hidden;background:linear-gradient(145deg,#0b1426,#101a2f 58%,#221605);box-shadow:0 26px 80px rgba(0,0,0,0.38);">
+        <div style="padding:28px 30px;border-bottom:1px solid rgba(255,255,255,0.12);">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.18em;color:#f4a623;font-weight:800;">Umbrella Care Connect</div>
+          <h1 style="margin:10px 0 0;font-size:30px;line-height:1.2;color:#ffffff;">{escape(title)}</h1>
+        </div>
+        <div style="padding:30px;color:#dbe7f5;font-size:16px;line-height:1.75;">
+          {body_html}
+        </div>
+        <div style="padding:22px 30px;background:rgba(255,255,255,0.05);color:#9fb1c8;font-size:13px;line-height:1.6;">
+          Sent by Umbrella Care Connect contact automation.
+        </div>
+      </div>
+    </div>
+    """
+
+
+class ContactMessageAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        name = _clean_contact_field(request.data.get("name"), 120)
+        email = _clean_contact_field(request.data.get("email"), 180).lower()
+        subject = _clean_contact_field(request.data.get("subject") or "New website message", 160)
+        message = str(request.data.get("message") or "").strip()
+
+        if not name or not email or not message:
+            return Response({"message": "Name, email, and message are required."}, status=400)
+
+        if len(message) < 10:
+            return Response({"message": "Please write a message of at least 10 characters."}, status=400)
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            return Response({"message": "Enter a valid email address."}, status=400)
+
+        api_key = getattr(settings, "RESEND_API_KEY", "") or ""
+        from_email = getattr(settings, "RESEND_FROM_EMAIL", "Umbrella Care Connect <onboarding@resend.dev>")
+        receiver_email = getattr(settings, "CONTACT_RECEIVER_EMAIL", "") or ""
+
+        if not api_key:
+            return Response({"message": "Contact email is not configured. Missing RESEND_API_KEY."}, status=500)
+
+        if not receiver_email:
+            return Response({"message": "Contact email is not configured. Missing CONTACT_RECEIVER_EMAIL."}, status=500)
+
+        resend.api_key = api_key
+
+        safe_message = escape(message).replace("\n", "<br>")
+        admin_html = _contact_email_shell(
+            "New contact message",
+            f"New message from {name}",
+            f"""
+            <p style="margin:0 0 18px;">A new visitor message arrived from the public contact page.</p>
+            <div style="display:grid;gap:12px;margin:0 0 22px;">
+              <div><strong style="color:#f4a623;">Name:</strong> {escape(name)}</div>
+              <div><strong style="color:#f4a623;">Email:</strong> {escape(email)}</div>
+              <div><strong style="color:#f4a623;">Subject:</strong> {escape(subject)}</div>
+            </div>
+            <div style="padding:18px 20px;border-radius:20px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);">
+              {safe_message}
+            </div>
+            """,
+        )
+
+        sender_html = _contact_email_shell(
+            "Message received",
+            "We received your message",
+            f"""
+            <p style="margin:0 0 18px;">Hi {escape(name)},</p>
+            <p style="margin:0 0 18px;">Thank you for reaching Umbrella Care Connect. We received your message and our team will review it as soon as possible.</p>
+            <div style="padding:18px 20px;border-radius:20px;background:rgba(244,166,35,0.14);border:1px solid rgba(244,166,35,0.28);">
+              <strong style="color:#f4a623;">Your message:</strong><br>
+              {safe_message}
+            </div>
+            <p style="margin:22px 0 0;color:#9fb1c8;">If this was urgent, you can also call the home directly using the contact information on our website.</p>
+            """,
+        )
+
+        try:
+            resend.Emails.send({
+                "from": from_email,
+                "to": [receiver_email],
+                "subject": f"New contact message: {subject}",
+                "html": admin_html,
+                "reply_to": email,
+            })
+            resend.Emails.send({
+                "from": from_email,
+                "to": [email],
+                "subject": "We received your Umbrella Care Connect message",
+                "html": sender_html,
+            })
+        except Exception:
+            return Response({"message": "Email provider failed to send the contact message."}, status=502)
+
+        return Response({"message": "Message sent. We also emailed the sender a confirmation."}, status=200)
 
 
 def _deactivate_existing_otps(user, purpose):
@@ -247,6 +462,56 @@ def _create_session_for_user(user, request):
     return auth_session
 
 
+def _revoke_current_auth_session(request):
+    user = None
+    user_id = request.session.get("user_id")
+    session_request_token = request.session.get("auth_session_request_token")
+
+    if user_id:
+        user = UserManagement.objects.filter(id=user_id, is_active=True).first()
+
+    sessions = AuthSession.objects.none()
+    if session_request_token:
+        sessions = AuthSession.objects.filter(session_request_token=session_request_token)
+        if user is not None:
+            sessions = sessions.filter(user=user)
+    elif user is not None:
+        sessions = AuthSession.objects.filter(user=user, is_active=True, status="active")
+
+    now = timezone.now()
+    revoked_count = 0
+
+    for auth_session in sessions:
+        if auth_session.is_active or auth_session.status == "active":
+            revoked_count += 1
+
+        auth_session.is_active = False
+        auth_session.status = "revoked"
+        auth_session.ended_at = now
+        auth_session.active_duration_seconds = max(
+            0,
+            int((now - auth_session.created_at).total_seconds()),
+        )
+        auth_session.save(
+            update_fields=[
+                "is_active",
+                "status",
+                "ended_at",
+                "active_duration_seconds",
+            ]
+        )
+
+    if user is not None and (
+        not session_request_token or user.current_session_key == str(session_request_token)
+    ):
+        user.current_session_key = None
+        user.last_seen = now
+        user.updated_at = now
+        user.save(update_fields=["current_session_key", "last_seen", "updated_at"])
+
+    return revoked_count
+
+
 # =========================
 # OPEN USER MANAGEMENT API
 # DEV ONLY - NO AUTH
@@ -271,7 +536,7 @@ class UserListCreateAPIView(APIView):
 
         allowed_ordering = {
             "created_at", "-created_at",
-            "full_name", "-full_name",
+            #"full_name", "-full_name",
             "username", "-username",
             "email", "-email",
             "reg_code", "-reg_code",
@@ -439,7 +704,6 @@ class AuthSignupAPIView(APIView):
             user = UserManagement.objects.create(
                 first_name=first_name,
                 last_name=last_name or None,
-                full_name=f"{first_name} {last_name}".strip(),
                 username=username,
                 email=email,
                 phone=phone or None,
@@ -840,7 +1104,7 @@ class AdminSigninVerifyOtpAPIView(APIView):
 
         return Response({
             "message": "Admin authentication successful.",
-            "redirect_url": "/dashboard/",
+            "redirect_url": _get_dashboard_redirect_for_user(otp.user),
         }, status=200)
 
 
@@ -878,3 +1142,30 @@ class AdminSigninResendOtpAPIView(APIView):
             "otp_request_token": str(otp.otp_request_token),
             "expires_at": otp.expires_at.isoformat(),
         }, status=200)
+
+
+class AuthLogoutAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        revoked_count = _revoke_current_auth_session(request)
+        request.session.flush()
+
+        response = Response({
+            "message": "Logged out successfully.",
+            "redirect_url": "/signin/",
+            "revoked_sessions": revoked_count,
+        }, status=200)
+        response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response["Pragma"] = "no-cache"
+        response["Expires"] = "0"
+        return response
+
+
+class CurrentUserAPIView(APIView):
+    authentication_classes = [DashboardSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(UserManagementSerializer(request.user).data)

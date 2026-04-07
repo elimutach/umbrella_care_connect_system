@@ -1,5 +1,7 @@
 import uuid
 from django.db import models
+from django.db.models import Value
+from django.db.models.functions import Coalesce, Concat, Trim
 from django.utils.timesince import timesince
 
 
@@ -19,7 +21,17 @@ class UserManagement(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, blank=True, null=True)
-    full_name = models.CharField(max_length=220, editable=False)
+    full_name = models.GeneratedField(
+        expression=Trim(
+            Concat(
+                Coalesce("first_name", Value("")),
+                Value(" "),
+                Coalesce("last_name", Value("")),
+            )
+        ),
+        output_field=models.CharField(max_length=220),
+        db_persist=True,
+    )
     username = models.CharField(max_length=100, unique=True)
     email = models.EmailField(max_length=255, unique=True)
     phone = models.CharField(max_length=30, blank=True, null=True)
@@ -57,11 +69,7 @@ class UserManagement(models.Model):
     @property
     def is_authenticated(self):
         return True
-
-    def save(self, *args, **kwargs):
-        self.full_name = f"{self.first_name or ''} {self.last_name or ''}".strip()
-        super().save(*args, **kwargs)
-
+    
     def __str__(self):
         return self.username
 
@@ -183,7 +191,7 @@ class AuthSession(models.Model):
 
     class Meta:
         managed = False
-        db_table = "auth_session"
+        db_table = "auth_sessions"
         ordering = ["-created_at"]
 
     def __str__(self):

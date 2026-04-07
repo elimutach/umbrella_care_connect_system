@@ -11,9 +11,10 @@
   <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/needs.css" />
+  <link rel="stylesheet" href="assets/css/main.css" />
   <script src="assets/js/client-navbar.js" type="text/javascript" defer></script>
   <style>
-    .flow-shell { padding: 34px 0 90px; }
+    .flow-shell { padding: 110px 0 90px; }
     .flow-card {
       width: min(920px, 100%);
       margin: 0 auto;
@@ -173,7 +174,7 @@
             The donor must confirm the need, account, payment method and pledge schedule before proceeding.
           </p>
         </div>
-        <a href="needs.html" class="theme-toggle" style="text-decoration:none;">
+        <a href="/needs/" class="theme-toggle" style="text-decoration:none;">
           <i class="bi bi-arrow-left"></i>
           <span>Back to Needs</span>
         </a>
@@ -268,7 +269,7 @@
     </div>
   </div>
 
-  <script src="needs.js"></script>
+  <script src="assets/js/public-needs.js"></script>
   <script>
     const flowModal = document.getElementById("flowModal");
     const flowModalCard = document.getElementById("flowModalCard");
@@ -284,7 +285,7 @@
     const params = new URLSearchParams(window.location.search);
     const needId = params.get("need") || localStorage.getItem("selectedNeedId");
     const presetAmount = localStorage.getItem("selectedAmount");
-    const selectedNeed = (window.UMBRELLA_NEEDS || []).find(item => item.id === needId);
+    let selectedNeed = null;
 
     function openFlowModal(type, title, text) {
       flowModalCard.classList.remove("error");
@@ -311,10 +312,11 @@
         return;
       }
 
+      const escapeHTML = window.UMBRELLA_NEEDS_API.escapeHTML;
       pledgeNeedBox.innerHTML = `
-        <h3>You are pledging toward: ${selectedNeed.title}</h3>
-        <p>${selectedNeed.description}</p>
-        <p><strong>Current progress:</strong> ${window.UMBRELLA_UTILS.formatKES(selectedNeed.raised)} raised out of ${selectedNeed.goal.toLocaleString("en-KE")}</p>
+        <h3>You are pledging toward: ${escapeHTML(selectedNeed.title)}</h3>
+        <p>${escapeHTML(selectedNeed.description)}</p>
+        <p><strong>Current progress:</strong> ${escapeHTML(selectedNeed.amountReceivedDisplay)} raised out of ${escapeHTML(selectedNeed.amountNeededDisplay)}</p>
       `;
     }
 
@@ -387,8 +389,10 @@
         return;
       }
 
-      const selectedInterval = document.querySelector('input[name="interval"]:checked')?.value;
-      const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+      const checkedInterval = document.querySelector('input[name="interval"]:checked');
+      const checkedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+      const selectedInterval = checkedInterval ? checkedInterval.value : "";
+      const selectedMethod = checkedMethod ? checkedMethod.value : "";
       const amount = Number(pledgeAmount.value);
 
       if (!amount || amount < 50) {
@@ -426,12 +430,20 @@
       if (e.target === flowModal) closeFlowModal();
     });
 
-    if (presetAmount && presetAmount !== "custom") {
-      pledgeAmount.value = presetAmount;
+    function initPledgePage() {
+      window.UMBRELLA_NEEDS_API.getNeedById(needId).then(function (need) {
+        selectedNeed = need;
+
+        if (presetAmount && presetAmount !== "custom") {
+          pledgeAmount.value = presetAmount;
+        }
+
+        renderNeedSummary();
+        renderPaymentFields("mpesa");
+      });
     }
 
-    renderNeedSummary();
-    renderPaymentFields("mpesa");
+    initPledgePage();
   </script>
 </body>
 </html>

@@ -78,3 +78,51 @@ class Donation(models.Model):
         if self.donation_type == "cash":
             return f"Cash Donation - {self.amount}"
         return f"In-Kind Donation - {self.item_name or 'Item'}"
+    
+class DonorPledge(models.Model):
+    FREQUENCY_CHOICES = [
+        ("weekly", "Weekly"),
+        ("biweekly", "Biweekly"),
+        ("monthly", "Monthly"),
+        ("quarterly", "Quarterly"),
+    ]
+
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("paused", "Paused"),
+        ("completed", "Completed"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    donor = models.ForeignKey(
+        UserManagement,
+        on_delete=models.CASCADE,
+        db_column="donor_id",
+        related_name="pledges",
+    )
+
+    need = models.ForeignKey(
+        NeedRecord,
+        on_delete=models.CASCADE,
+        db_column="need_id",
+        related_name="pledges",
+    )
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES)
+    start_date = models.DateField(default=timezone.now)
+    next_due_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
+    notes = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        managed = False
+        db_table = "donor_pledges"
+
+    def __str__(self):
+        return f"{self.donor} -> {self.need} ({self.amount})"

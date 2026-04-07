@@ -72,176 +72,58 @@ const dateEl = document.getElementById("currentDate");
   }
 
   function initReportPreview() {
-  const reportSelect = document.getElementById("reportType");
-  const startDateInput = document.getElementById("reportStartDate");
-  const endDateInput = document.getElementById("reportEndDate");
-  const stat1 = document.getElementById("stat1");
-  const stat2 = document.getElementById("stat2");
-  const stat3 = document.getElementById("stat3");
-  const stat4 = document.getElementById("stat4");
-  const stat5 = document.getElementById("stat5");
-  const detailBlock = document.getElementById("detailedReportBlock");
-  const genReportBtn = document.getElementById("genReportBtn");
-  const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const reportSelect = document.getElementById('reportType');
+    const stat1 = document.getElementById('stat1');
+    const stat2 = document.getElementById('stat2');
+    const stat3 = document.getElementById('stat3');
+    const stat4 = document.getElementById('stat4');
+    const stat5 = document.getElementById('stat5');
+    const detailBlock = document.getElementById('detailedReportBlock');
+    const genReportBtn = document.getElementById('genReportBtn');
 
-  const REPORTS_API = `${API_BASE_URL}/api/reports/`;
-  const REPORTS_EXPORT_API = `${API_BASE_URL}/api/reports/export/`;
+    if (!reportSelect) return;
 
-  if (!reportSelect || !genReportBtn || !detailBlock) return;
-
-  function normalizeReportType(rawValue) {
-    const value = String(rawValue || "").toLowerCase().trim();
-
-    if (value.includes("donation")) return "donations";
-    if (value.includes("need")) return "needs";
-    if (value.includes("volunteer")) return "volunteers";
-
-    return "donations";
-  }
-
-  function formatSummaryValue(value) {
-    if (value === null || value === undefined || value === "") return "—";
-    return String(value);
-  }
-
-  function renderSummaryCards(reportType, summary = {}) {
-    if (!stat1 || !stat2 || !stat3 || !stat4 || !stat5) return;
-
-    if (reportType === "donations") {
-      stat1.innerText = formatSummaryValue(summary.count ?? 0);
-      stat2.innerText = formatSummaryValue(summary.cash_total ?? 0);
-      stat3.innerText = formatSummaryValue(summary.in_kind_count ?? 0);
-      stat4.innerText = "—";
-      stat5.innerText = "—";
-      return;
+    function updateReportPreview() {
+      const type = reportSelect.value;
+      if (type === 'Donations report') {
+        stat1.innerText = '486'; stat2.innerText = '34'; stat3.innerText = '212'; stat4.innerText = '142'; stat5.innerText = '29';
+        detailBlock.innerHTML = `<div><i class="bi bi-cash-stack fs-3 me-2"></i> <strong>Donations summary</strong></div>
+          <div class="progress-tag"><i class="bi bi-calendar-week"></i> cash: 312K KES · in-kind: 174 items</div>
+          <div class="progress-tag"><i class="bi bi-graph-up-arrow"></i> 23% increase from last month</div>
+          <div class="ms-auto"><i class="bi bi-download"></i> export</div>`;
+      } else if (type === 'Volunteer & duties') {
+        stat1.innerText = '38'; stat2.innerText = '12'; stat3.innerText = '316'; stat4.innerText = '46'; stat5.innerText = '9';
+        detailBlock.innerHTML = `<div><i class="bi bi-person-workspace fs-3 me-2"></i> <strong>Volunteer duties · activeness</strong></div>
+          <div class="progress-tag"><i class="bi bi-calendar-check"></i> 24 duties scheduled, 19 completed</div>
+          <div class="progress-tag"><i class="bi bi-heart-pulse"></i> top volunteer: Mary N. (12 hrs)</div>
+          <div class="ms-auto"><i class="bi bi-file-spreadsheet"></i> full log</div>`;
+      } else if (type === 'Needs & fulfillment') {
+        stat1.innerText = '52'; stat2.innerText = '34'; stat3.innerText = '18'; stat4.innerText = '26'; stat5.innerText = '11';
+        detailBlock.innerHTML = `<div><i class="bi bi-box-seam fs-3 me-2"></i> <strong>Needs fulfillment rate</strong></div>
+          <div class="progress-tag">Food packs: 78% · Education: 42% · Medical: 90%</div>
+          <div class="progress-tag">Most urgent: School uniforms (need 60, got 12)</div>
+          <div class="ms-auto"><i class="bi bi-printer"></i> print</div>`;
+      } else if (type === 'Donor activeness') {
+        stat1.innerText = '210'; stat2.innerText = '148'; stat3.innerText = '62'; stat4.innerText = '87'; stat5.innerText = '13';
+        detailBlock.innerHTML = `<div><i class="bi bi-people-fill fs-3 me-2"></i> <strong>Donor engagement</strong></div>
+          <div class="progress-tag">Repeat donors: 64% · new donors this month: 28</div>
+          <div class="progress-tag">avg donation size: 3,200 KES</div>
+          <div class="ms-auto"><i class="bi bi-graph-up"></i> trends</div>`;
+      } else {
+        stat1.innerText = '—'; stat2.innerText = '—'; stat3.innerText = '—'; stat4.innerText = '—'; stat5.innerText = '—';
+        detailBlock.innerHTML = `<div><i class="bi bi-sliders2"></i> select a report type</div>`;
+      }
     }
 
-    if (reportType === "needs") {
-      stat1.innerText = formatSummaryValue(summary.count ?? 0);
-      stat2.innerText = formatSummaryValue(summary.total_needed ?? 0);
-      stat3.innerText = formatSummaryValue(summary.total_received ?? 0);
-      stat4.innerText = "—";
-      stat5.innerText = "—";
-      return;
-    }
-
-    if (reportType === "volunteers") {
-      stat1.innerText = formatSummaryValue(summary.count ?? 0);
-      stat2.innerText = formatSummaryValue(summary.confirmed_count ?? 0);
-      stat3.innerText = formatSummaryValue(summary.attended_count ?? 0);
-      stat4.innerText = "—";
-      stat5.innerText = "—";
-      return;
-    }
-
-    stat1.innerText = "—";
-    stat2.innerText = "—";
-    stat3.innerText = "—";
-    stat4.innerText = "—";
-    stat5.innerText = "—";
-  }
-
-  function renderTable(headers = [], rows = [], summary = {}) {
-    if (!headers.length) {
-      detailBlock.innerHTML = `<div><i class="bi bi-sliders2"></i> No report data available.</div>`;
-      return;
-    }
-
-    const summaryHtml = Object.entries(summary)
-      .map(([key, value]) => {
-        if (key === "title") return "";
-        return `<span class="progress-tag"><strong>${escapeHtml(key.replaceAll("_", " "))}:</strong> ${escapeHtml(String(value))}</span>`;
-      })
-      .join("");
-
-    const tableHead = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
-    const tableRows = rows.length
-      ? rows.map((row) => `
-          <tr>
-            ${row.map((cell) => `<td>${escapeHtml(String(cell ?? "-"))}</td>`).join("")}
-          </tr>
-        `).join("")
-      : `<tr><td colspan="${headers.length}" class="text-center py-4 text-muted">No records found for selected period.</td></tr>`;
-
-    detailBlock.innerHTML = `
-      <div class="mb-3">
-        <div><strong>${escapeHtml(summary.title || "Report")}</strong></div>
-        <div class="d-flex flex-wrap gap-2 mt-2">
-          ${summaryHtml || `<span class="progress-tag">No summary data</span>`}
-        </div>
-      </div>
-
-      <div style="overflow:auto;">
-        <table class="table table-bordered align-middle">
-          <thead>
-            <tr>${tableHead}</tr>
-          </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  async function loadReport() {
-    const reportType = normalizeReportType(reportSelect.value);
-    const params = new URLSearchParams({
-      report_type: reportType,
-      start_date: startDateInput?.value || "",
-      end_date: endDateInput?.value || "",
+    reportSelect.addEventListener('change', updateReportPreview);
+    genReportBtn?.addEventListener('click', function (e) {
+      e.preventDefault();
+      updateReportPreview();
+      alert('Report generated (demo) – check figures updated.');
     });
 
-    const response = await fetch(`${REPORTS_API}?${params.toString()}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Report failed (${response.status}): ${text}`);
-    }
-
-    const data = await response.json();
-    renderSummaryCards(reportType, data.summary || {});
-    renderTable(data.headers || [], data.rows || [], data.summary || {});
+    updateReportPreview();
   }
-
-  genReportBtn.addEventListener("click", async function (e) {
-    e.preventDefault();
-
-    try {
-      genReportBtn.disabled = true;
-      genReportBtn.textContent = "Generating...";
-      await loadReport();
-    } catch (error) {
-      console.error("Report load error:", error);
-      detailBlock.innerHTML = `
-        <div class="text-danger">
-          Failed to generate report.<br>
-          <small>${escapeHtml(error.message || "Unknown error")}</small>
-        </div>
-      `;
-    } finally {
-      genReportBtn.disabled = false;
-      genReportBtn.textContent = "Generate";
-    }
-  });
-
-  exportCsvBtn?.addEventListener("click", function (e) {
-    e.preventDefault();
-
-    const reportType = normalizeReportType(reportSelect.value);
-    const params = new URLSearchParams({
-      report_type: reportType,
-      start_date: startDateInput?.value || "",
-      end_date: endDateInput?.value || "",
-    });
-
-    window.location.href = `${REPORTS_EXPORT_API}?${params.toString()}`;
-  });
-}
 
   if (localStorage.getItem('umbrellaTheme') === 'dark') setTheme('dark');
   else setTheme('light');
@@ -294,16 +176,12 @@ const dateEl = document.getElementById("currentDate");
   const volunteerCaption = document.getElementById('dashboardVolunteerCaption');
   const quickScheduleBtn = document.getElementById('dashboardQuickScheduleBtn');
   const dashboardActionAddEvent = document.getElementById('dashboardActionAddEvent');
-  const adminDonorStatCount = document.getElementById('adminDonorStatCount');
-  const adminDonorStatRevenue = document.getElementById('adminDonorStatRevenue');
-  const adminDonorStatGoal = document.getElementById('adminDonorStatGoal');
-  const adminDonorStatAverage = document.getElementById('adminDonorStatAverage');
 
   const NEEDS_API = `${API_BASE_URL}/needs/api/`;
   const DONATION_STATS_API = `${API_BASE_URL}/donations/api/donations/stats/`;
   const DONATIONS_API = `${API_BASE_URL}/donations/api/donations/`;
   const VOLUNTEERS_API = `${API_BASE_URL}/api/volunteers/`;
-  const CALENDAR_API = `${API_BASE_URL}/calendar/events/`;
+  const CALENDAR_API = `${API_BASE_URL}/api/calendar/events/`;
 
   function formatKES(value) {
     const num = Number(value || 0);
@@ -645,7 +523,6 @@ const dateEl = document.getElementById("currentDate");
       donationStats.monthly_total ||
       donationStats.this_month_total ||
       'KES 0';
-    const averageDonation = donationStats.average_donation || 'KES 0.00';
 
     const goalPercentage =
       Number.parseInt(
@@ -670,20 +547,6 @@ const dateEl = document.getElementById("currentDate");
     }
     if (donationGoalMeta) {
       donationGoalMeta.textContent = `${goalPercentage}% of goal`;
-    }
-
-    if (adminDonorStatCount) {
-      adminDonorStatCount.textContent = donorCount.toLocaleString();
-    }
-    if (adminDonorStatRevenue) {
-      adminDonorStatRevenue.textContent =
-        typeof monthlyTotal === 'string' ? monthlyTotal : formatKES(monthlyTotal);
-    }
-    if (adminDonorStatGoal) {
-      adminDonorStatGoal.textContent = `${goalPercentage}%`;
-    }
-    if (adminDonorStatAverage) {
-      adminDonorStatAverage.textContent = averageDonation;
     }
 
     if (volunteerValue) {
@@ -798,8 +661,6 @@ const dateEl = document.getElementById("currentDate");
     );
     renderPriorities(activeNeeds, upcomingEvents);
   }
-
-  window.refreshAdminDashboardHome = initDashboardHome;
 
   initDashboardHome().catch((error) => {
     console.error('Dashboard summary failed:', error);
@@ -1043,14 +904,7 @@ async function freezeUser(userId) {
 }
 
 async function deleteUser(userId) {
-  const confirmed = window.UmbrellaConfirm
-    ? await window.UmbrellaConfirm.ask({
-        title: "Delete user?",
-        message: "This will permanently terminate this user record.",
-        confirmText: "Delete user",
-        kicker: "User warning",
-      })
-    : confirm("Delete this user permanently?");
+  const confirmed = confirm("Delete this user permanently?");
   if (!confirmed) return;
 
   try {
@@ -1434,9 +1288,6 @@ fetchUsers();
   const needsSortButtons = document.querySelectorAll(".needs-th-btn");
   const needPagination = document.getElementById("needPagination");
 
-const needTypeInput = document.getElementById("needType");
-const needUnitInput = document.getElementById("needUnit");
-
   if (!needsTableBody || !needsCardsGrid || !needForm) return;
 
   const needState = {
@@ -1496,38 +1347,38 @@ const needUnitInput = document.getElementById("needUnit");
   }
 
   function formatNeedNumber(value) {
-  const num = Number(value || 0);
+    const num = Number(value || 0);
 
-  return num.toLocaleString("en-KE", {
-    minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function resolveNeedUnit(need) {
-  const type = String(need.need_type || "in_kind").toLowerCase();
-  const rawUnit = String(need.unit || "").trim();
-
-  if (type === "cash") return "KES";
-
-  if (rawUnit && rawUnit.toLowerCase() !== "kes") {
-    return rawUnit;
+    return num.toLocaleString("en-KE", {
+      minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
   }
 
-  return "units";
-}
+  function resolveNeedUnit(need) {
+    const type = String(need.need_type || "in_kind").toLowerCase();
+    const rawUnit = String(need.unit || "").trim();
 
-function formatNeedValue(need, value) {
-  const type = String(need.need_type || "in_kind").toLowerCase();
-  const amount = formatNeedNumber(value);
-  const unit = resolveNeedUnit(need);
+    if (type === "cash") return "KES";
 
-  if (type === "cash") {
-    return `KES ${amount}`;
+    if (rawUnit && rawUnit.toLowerCase() !== "kes") {
+      return rawUnit;
+    }
+
+    return "units";
   }
 
-  return `${amount} ${unit}`;
-}
+  function formatNeedValue(need, value) {
+    const type = String(need.need_type || "in_kind").toLowerCase();
+    const amount = formatNeedNumber(value);
+    const unit = resolveNeedUnit(need);
+
+    if (type === "cash") {
+      return `KES ${amount}`;
+    }
+
+    return `${amount} ${unit}`;
+  }
 
   function formatDate(value) {
     if (!value) return "-";
@@ -1641,7 +1492,7 @@ function formatNeedValue(need, value) {
 
             <div class="need-admin-progress-text">
               <span class="raised">${escapeHtml(formatNeedValue(need, need.quantity_fulfilled))}</span>
-out of ${escapeHtml(formatNeedValue(need, need.quantity_required))}
+              out of ${escapeHtml(formatNeedValue(need, need.quantity_required))}
             </div>
 
             <div class="need-admin-progress-bar">
@@ -1690,7 +1541,7 @@ out of ${escapeHtml(formatNeedValue(need, need.quantity_required))}
         </td>
 
         <td>${escapeHtml(formatNeedValue(need, need.quantity_required))}</td>
-<td>${escapeHtml(formatNeedValue(need, need.quantity_fulfilled))}</td>
+        <td>${escapeHtml(formatNeedValue(need, need.quantity_fulfilled))}</td>
 
         <td>
           <span class="need-status-pill ${getNeedStatusClass(need.status)}">
@@ -1809,20 +1660,17 @@ function renderNeeds() {
   }
 
   function collectNeedFormData() {
-  const needType = document.getElementById("needType")?.value || "in_kind";
-  const rawUnit = document.getElementById("needUnit")?.value?.trim() || "";
-
-  return {
-    title: document.getElementById("needTitle")?.value?.trim() || "",
-    description: document.getElementById("needDescription")?.value?.trim() || "",
-    quantity_required: parseFloat(document.getElementById("needQuantityRequired")?.value || "0"),
-    quantity_fulfilled: parseFloat(document.getElementById("needQuantityFulfilled")?.value || "0"),
-    deadline: document.getElementById("needDeadline")?.value || null,
-    status: document.getElementById("needStatus")?.value || "pending",
-    need_type: needType,
-    unit: needType === "cash" ? "KES" : (rawUnit || "units"),
-    image_url: document.getElementById("needImageUrl")?.value?.trim() || "",
-  };
+    return {
+      title: document.getElementById("needTitle")?.value?.trim() || "",
+      description: document.getElementById("needDescription")?.value?.trim() || "",
+      quantity_required: parseFloat(document.getElementById("needQuantityRequired")?.value || "0"),
+      quantity_fulfilled: parseFloat(document.getElementById("needQuantityFulfilled")?.value || "0"),
+      deadline: document.getElementById("needDeadline")?.value || null,
+      status: document.getElementById("needStatus")?.value || "pending",
+      need_type: document.getElementById("needType")?.value || "in_kind",
+      unit: document.getElementById("needUnit")?.value?.trim() || "units",
+      image_url: document.getElementById("needImageUrl")?.value?.trim() || "",
+    };
   }
 
   function resetNeedForm() {
@@ -1835,8 +1683,6 @@ function renderNeeds() {
     document.getElementById("needImageUrl").value = "";
     needModalTitle.textContent = "Add Need";
     needSubmitBtn.textContent = "Save Need";
-
-    syncNeedUnitField();
   }
 
   async function fetchNeeds() {
@@ -1925,9 +1771,6 @@ function renderNeeds() {
       document.getElementById("needStatus").value = need.status || "pending";
       document.getElementById("needType").value = need.need_type || "in_kind";
       document.getElementById("needUnit").value = need.unit || "units";
-
-      syncNeedUnitField();
-
       document.getElementById("needImageUrl").value = need.image_url || "";
 
       openNeedModal(true);
@@ -1960,15 +1803,7 @@ function renderNeeds() {
   };
 
   window.deleteNeed = async function (needId) {
-    const confirmed = window.UmbrellaConfirm
-      ? await window.UmbrellaConfirm.ask({
-          title: "Delete need?",
-          message: "This will permanently delete this need and remove it from the admin list.",
-          confirmText: "Delete need",
-          kicker: "Need warning",
-        })
-      : confirm("Delete this need?");
-    if (!confirmed) return;
+    if (!confirm("Delete this need?")) return;
 
     try {
       await needsRequest(`${DJANGO_NEEDS_API}${needId}/`, {
@@ -1983,16 +1818,7 @@ function renderNeeds() {
   };
 
   window.closeNeed = async function (needId) {
-    const confirmed = window.UmbrellaConfirm
-      ? await window.UmbrellaConfirm.ask({
-          title: "Close need?",
-          message: "This will mark the need as closed and remove it from active work.",
-          confirmText: "Close need",
-          kicker: "Need warning",
-          icon: "bi-lock",
-        })
-      : confirm("Close this need?");
-    if (!confirmed) return;
+    if (!confirm("Close this need?")) return;
 
     try {
       await needsRequest(`${DJANGO_NEEDS_API}${needId}/close/`, {
@@ -2148,27 +1974,6 @@ function renderNeeds() {
       checkbox.checked = e.target.checked;
     });
   });
-
-  function syncNeedUnitField() {
-    if (!needTypeInput || !needUnitInput) return;
-
-    const type = needTypeInput.value;
-
-    if (type === "cash") {
-      needUnitInput.value = "KES";
-      needUnitInput.setAttribute("readonly", "readonly");
-      needUnitInput.placeholder = "KES";
-    } else {
-      if ((needUnitInput.value || "").trim().toUpperCase() === "KES") {
-        needUnitInput.value = "";
-      }
-      needUnitInput.removeAttribute("readonly");
-      needUnitInput.placeholder = "e.g. blankets, bags, books";
-    }
-  }
-
-  needTypeInput?.addEventListener("change", syncNeedUnitField);
-  syncNeedUnitField();
 
   switchNeedsView("cards");
   fetchNeeds();
@@ -2710,207 +2515,88 @@ function renderNeeds() {
     }
   };
 
-  function ensureDonationModal() {
-    let modal = document.getElementById("donationActionModal");
-    if (modal) return modal;
-
-    modal = document.createElement("div");
-    modal.id = "donationActionModal";
-    modal.className = "dashboard-action-modal-backdrop is-hidden";
-    modal.innerHTML = `
-      <section class="dashboard-action-modal-card" role="dialog" aria-modal="true" aria-labelledby="donationActionModalTitle">
-        <button class="dashboard-action-modal-close" type="button" data-modal-close>
-          <i class="bi bi-x-lg"></i>
-        </button>
-        <div class="dashboard-action-modal-head">
-          <span class="dashboard-action-modal-icon"><i class="bi bi-receipt-cutoff"></i></span>
-          <div>
-            <p class="dashboard-action-modal-kicker">Donation record</p>
-            <h3 id="donationActionModalTitle">Donation details</h3>
-          </div>
-        </div>
-        <div class="dashboard-action-modal-body" id="donationActionModalBody"></div>
-        <div class="dashboard-action-modal-actions" id="donationActionModalActions"></div>
-      </section>
-    `;
-
-    document.body.appendChild(modal);
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal || event.target.closest("[data-modal-close]")) {
-        closeDonationModal();
-      }
-    });
-
-    return modal;
-  }
-
-  function closeDonationModal() {
-    const modal = document.getElementById("donationActionModal");
-    if (modal) modal.classList.add("is-hidden");
-    document.body.classList.remove("has-dashboard-modal");
-  }
-
-  function openDonationModal(title, bodyHtml, actionsHtml = "") {
-    const modal = ensureDonationModal();
-    modal.querySelector("#donationActionModalTitle").textContent = title;
-    modal.querySelector("#donationActionModalBody").innerHTML = bodyHtml;
-    modal.querySelector("#donationActionModalActions").innerHTML = actionsHtml;
-    modal.classList.remove("is-hidden");
-    document.body.classList.add("has-dashboard-modal");
-  }
-
-  function donationDetailGrid(donation) {
-    const fields = [
-      ["Donor", donation.donor_name || "-"],
-      ["Reference", donation.reference_code || "-"],
-      ["Email", donation.email || "-"],
-      ["Method", donation.method_label || donation.method || "-"],
-      ["Date & time", donation.datetime || "-"],
-      ["Country", donation.country || "-"],
-      ["Pledge", donation.pledge || "-"],
-      ["Amount", donation.amount || "-"],
-      ["Status", donation.status_label || donation.status || "-"],
-      ["Donation towards", donation.donation_towards || "-"],
-      ["Comment", donation.comment || "-"],
-    ];
-
-    return `
-      <div class="dashboard-detail-grid">
-        ${fields
-          .map(
-            ([label, value]) => `
-              <div class="dashboard-detail-item">
-                <small>${escapeHtml(label)}</small>
-                <strong>${escapeHtml(value)}</strong>
-              </div>
-            `
-          )
-          .join("")}
-      </div>
-    `;
-  }
-
-  async function getDonation(donationId) {
-    const response = await fetch(`${DJANGO_DONATIONS_API}${donationId}/`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to load donation details");
-    }
-
-    return response.json();
-  }
-
   window.viewDonation = async function (donationId) {
     try {
-      const donation = await getDonation(donationId);
+      const response = await fetch(`${DJANGO_DONATIONS_API}${donationId}/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-      openDonationModal(
-        "Donor donation details",
-        donationDetailGrid(donation),
-        `
-          <button class="dashboard-modal-btn secondary" type="button" data-modal-close>Close</button>
-          <button class="dashboard-modal-btn primary" type="button" onclick="editDonation('${donationId}')">
-            <i class="bi bi-pencil"></i> Edit status
-          </button>
-        `
+      if (!response.ok) {
+        throw new Error("Failed to load donation details");
+      }
+
+      const donation = await response.json();
+
+      alert(
+        [
+          `Donor: ${donation.donor_name || "-"}`,
+          `Reference: ${donation.reference_code || "-"}`,
+          `Email: ${donation.email || "-"}`,
+          `Method: ${donation.method_label || donation.method || "-"}`,
+          `Amount: ${donation.amount || "-"}`,
+          `Status: ${donation.status_label || donation.status || "-"}`,
+          `Towards: ${donation.donation_towards || "-"}`,
+          `Comment: ${donation.comment || "-"}`,
+        ].join("\\n")
       );
     } catch (error) {
       console.error("View donation error:", error);
-      openDonationModal("Unable to load donation", `<p class="text-danger mb-0">${escapeHtml(error.message || "Failed to load donation details.")}</p>`);
+      alert("Failed to load donation details.");
     }
   };
 
   window.editDonation = async function (donationId) {
     try {
-      const donation = await getDonation(donationId);
-      const currentNotes = donation.comment === "-" ? "" : donation.comment || "";
-
-      openDonationModal(
-        "Edit donation status",
-        `
-          <form id="donationEditForm" class="dashboard-modal-form">
-            ${donationDetailGrid(donation)}
-            <div class="dashboard-modal-field">
-              <label for="donationEditStatus">Donation status</label>
-              <select id="donationEditStatus" required>
-                <option value="pending" ${donation.status === "pending" ? "selected" : ""}>Pending</option>
-                <option value="confirmed" ${donation.status === "confirmed" ? "selected" : ""}>Confirmed</option>
-                <option value="received" ${donation.status === "received" ? "selected" : ""}>Received</option>
-                <option value="cancelled" ${donation.status === "cancelled" ? "selected" : ""}>Cancelled</option>
-              </select>
-            </div>
-            <div class="dashboard-modal-field">
-              <label for="donationEditNotes">Comment / notes</label>
-              <textarea id="donationEditNotes">${escapeHtml(currentNotes)}</textarea>
-            </div>
-          </form>
-        `,
-        `
-          <button class="dashboard-modal-btn secondary" type="button" data-modal-close>Cancel</button>
-          <button class="dashboard-modal-btn primary" type="submit" form="donationEditForm">
-            <i class="bi bi-save"></i> Save changes
-          </button>
-        `
-      );
-
-      document.getElementById("donationEditForm")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        const submitBtn = document.querySelector('[form="donationEditForm"]');
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.innerHTML = `<i class="bi bi-hourglass-split"></i> Saving...`;
-        }
-
-        try {
-          const patchResponse = await fetch(`${DJANGO_DONATIONS_API}${donationId}/`, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({
-              status: document.getElementById("donationEditStatus").value,
-              notes: document.getElementById("donationEditNotes").value.trim(),
-            }),
-          });
-
-          if (!patchResponse.ok) {
-            throw new Error("Failed to update donation");
-          }
-
-          closeDonationModal();
-          fetchDonations();
-          fetchDonationStats();
-          if (typeof window.refreshAdminDashboardHome === "function") {
-            window.refreshAdminDashboardHome().catch((error) => {
-              console.error("Dashboard summary refresh failed:", error);
-            });
-          }
-        } catch (error) {
-          console.error("Edit donation error:", error);
-          openDonationModal("Unable to update donation", `<p class="text-danger mb-0">${escapeHtml(error.message || "Failed to update donation.")}</p>`);
-        }
+      const getResponse = await fetch(`${DJANGO_DONATIONS_API}${donationId}/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
+
+      if (!getResponse.ok) {
+        throw new Error("Failed to load donation");
+      }
+
+      const donation = await getResponse.json();
+
+      const status = prompt(
+        "Status (pending, confirmed, received, cancelled):",
+        donation.status || "pending"
+      );
+      if (status === null) return;
+
+      const notes = prompt("Comment / Notes:", donation.comment === "-" ? "" : donation.comment || "");
+      if (notes === null) return;
+
+      const patchResponse = await fetch(`${DJANGO_DONATIONS_API}${donationId}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status,
+          notes,
+        }),
+      });
+
+      if (!patchResponse.ok) {
+        throw new Error("Failed to update donation");
+      }
+
+      fetchDonations();
+      fetchDonationStats();
     } catch (error) {
       console.error("Edit donation error:", error);
-      openDonationModal("Unable to edit donation", `<p class="text-danger mb-0">${escapeHtml(error.message || "Failed to update donation.")}</p>`);
+      alert("Failed to update donation.");
     }
   };
 
   window.deleteDonation = async function (donationId) {
-    const confirmed = window.UmbrellaConfirm
-      ? await window.UmbrellaConfirm.ask({
-          title: "Delete donation?",
-          message: "This will permanently delete this donation record from the database.",
-          confirmText: "Delete donation",
-          kicker: "Donation warning",
-        })
-      : confirm("Delete this donation permanently?");
+    const confirmed = confirm("Delete this donation permanently?");
     if (!confirmed) return;
 
     try {
@@ -2927,14 +2613,9 @@ function renderNeeds() {
 
       fetchDonations();
       fetchDonationStats();
-      if (typeof window.refreshAdminDashboardHome === "function") {
-        window.refreshAdminDashboardHome().catch((error) => {
-          console.error("Dashboard summary refresh failed:", error);
-        });
-      }
     } catch (error) {
       console.error("Delete donation error:", error);
-      openDonationModal("Unable to delete donation", `<p class="text-danger mb-0">${escapeHtml(error.message || "Failed to delete donation.")}</p>`);
+      alert("Failed to delete donation.");
     }
   };
 
@@ -3923,14 +3604,14 @@ document.querySelectorAll(".stock-nav-link").forEach((link) => {
 /* =========================================
    CALENDAR PAGE - DJANGO CONNECTED VERSION
    Endpoints expected:
-   GET    /calendar/events/
-POST   /calendar/events/
-GET    /calendar/events/:id/
-PATCH  /calendar/events/:id/
-DELETE /calendar/events/:id/
+   GET    /api/calendar/events/
+   POST   /api/calendar/events/
+   GET    /api/calendar/events/:id/
+   PATCH  /api/calendar/events/:id/
+   DELETE /api/calendar/events/:id/
 ========================================= */
 (function () {
-  const CALENDAR_API = `${API_BASE_URL}/calendar/events/`;
+  const CALENDAR_API = `${API_BASE_URL}/api/calendar/events/`;
 
   const board = document.getElementById("calendarBoard");
   const currentLabel = document.getElementById("calendarCurrentLabel");
@@ -4649,15 +4330,7 @@ DELETE /calendar/events/:id/
 
   deleteEventBtn?.addEventListener("click", async () => {
     if (!eventIdField.value) return;
-    const confirmed = window.UmbrellaConfirm
-      ? await window.UmbrellaConfirm.ask({
-          title: "Delete event?",
-          message: "This will permanently delete this calendar event.",
-          confirmText: "Delete event",
-          kicker: "Calendar warning",
-        })
-      : confirm("Delete this event?");
-    if (!confirmed) return;
+    if (!confirm("Delete this event?")) return;
 
     try {
       await deleteEvent(eventIdField.value);
@@ -4876,15 +4549,21 @@ DELETE /calendar/events/:id/
 
   async function fetchSettingsUser() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/me/`, {
+      const response = await fetch(`${SETTINGS_USERS_API}?page=1&page_size=1`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
       });
 
       if (!response.ok) throw new Error("Failed to load settings user.");
 
-      fillSettingsUI(await response.json());
+      const data = await response.json();
+      const user = data?.results?.[0];
+
+      if (!user) {
+        throw new Error("No active user record found.");
+      }
+
+      fillSettingsUI(user);
     } catch (error) {
       console.error("Settings load error:", error);
       showSettingsMessage(error.message || "Failed to load settings.", "error");
@@ -4934,7 +4613,6 @@ DELETE /calendar/events/:id/
 
       const updatedUser = await patchSettingsUser(payload);
       fillSettingsUI(updatedUser);
-      window.dispatchEvent(new CustomEvent("umbrella:user-updated", { detail: updatedUser }));
       showSettingsMessage("Profile updated successfully.", "success");
     } catch (error) {
       console.error("Profile settings update error:", error);
@@ -4953,7 +4631,6 @@ DELETE /calendar/events/:id/
 
       const updatedUser = await patchSettingsUser(payload);
       fillSettingsUI(updatedUser);
-      window.dispatchEvent(new CustomEvent("umbrella:user-updated", { detail: updatedUser }));
       showSettingsMessage("Details updated successfully.", "success");
     } catch (error) {
       console.error("Details settings update error:", error);
@@ -5028,238 +4705,3 @@ DELETE /calendar/events/:id/
 
   fetchSettingsUser();
 })();
-
-function initReportPreview() {
-  const reportSelect = document.getElementById('reportType');
-  const stat1 = document.getElementById('stat1');
-  const stat2 = document.getElementById('stat2');
-  const stat3 = document.getElementById('stat3');
-  const stat4 = document.getElementById('stat4');
-  const stat5 = document.getElementById('stat5');
-  const detailBlock = document.getElementById('detailedReportBlock');
-  const genReportBtn = document.getElementById('genReportBtn');
-
-  // Optional date inputs if you add them in HTML later
-  const reportStartDate = document.getElementById('reportStartDate');
-  const reportEndDate = document.getElementById('reportEndDate');
-
-  if (!reportSelect || !detailBlock) return;
-
-  const REPORTS_API = `${API_BASE_URL}/api/reports/`;
-  const REPORTS_EXPORT_API = `${API_BASE_URL}/api/reports/export/`;
-
-  function getTodayISO() {
-    const d = new Date();
-    return d.toISOString().split("T")[0];
-  }
-
-  function getFirstDayOfMonthISO() {
-    const d = new Date();
-    d.setDate(1);
-    return d.toISOString().split("T")[0];
-  }
-
-  function mapReportType(uiValue) {
-    const value = (uiValue || "").toLowerCase().trim();
-
-    if (value.includes("donation")) return "donations";
-    if (value.includes("volunteer")) return "volunteers";
-    if (value.includes("need")) return "needs";
-
-    // "Donor activeness" is not yet in backend
-    if (value.includes("donor")) return "unsupported_donor_activity";
-
-    return "donations";
-  }
-
-  function buildQuery(reportType) {
-    const params = new URLSearchParams();
-    params.set("report_type", reportType);
-
-    if (reportStartDate?.value) params.set("start_date", reportStartDate.value);
-    if (reportEndDate?.value) params.set("end_date", reportEndDate.value);
-
-    return params.toString();
-  }
-
-  function setStat(el, value) {
-    if (!el) return;
-    el.innerText = value ?? "—";
-  }
-
-  function renderStats(reportType, summary = {}) {
-    if (reportType === "donations") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.cash_total ?? 0);
-      setStat(stat3, summary.in_kind_count ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
-    }
-
-    if (reportType === "volunteers") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.confirmed_count ?? 0);
-      setStat(stat3, summary.attended_count ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
-    }
-
-    if (reportType === "needs") {
-      setStat(stat1, summary.count ?? 0);
-      setStat(stat2, summary.total_needed ?? 0);
-      setStat(stat3, summary.total_received ?? 0);
-      setStat(stat4, "—");
-      setStat(stat5, "—");
-      return;
-    }
-
-    setStat(stat1, "—");
-    setStat(stat2, "—");
-    setStat(stat3, "—");
-    setStat(stat4, "—");
-    setStat(stat5, "—");
-  }
-
-  function renderTable(headers = [], rows = []) {
-    if (!headers.length) {
-      return `<div class="text-muted">No report columns available.</div>`;
-    }
-
-    if (!rows.length) {
-      return `<div class="text-muted mt-2">No records found for this period.</div>`;
-    }
-
-    return `
-      <div class="table-responsive mt-3">
-        <table class="table table-sm table-bordered align-middle mb-0">
-          <thead>
-            <tr>
-              ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.slice(0, 15).map((row) => `
-              <tr>
-                ${row.map((cell) => `<td>${escapeHtml(String(cell ?? "-"))}</td>`).join("")}
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-      ${rows.length > 15 ? `<div class="small text-muted mt-2">Showing first 15 rows. Export CSV for the full report.</div>` : ""}
-    `;
-  }
-
-  function renderUnsupportedReport() {
-    renderStats("unsupported", {});
-    detailBlock.innerHTML = `
-      <div><i class="bi bi-info-circle fs-3 me-2"></i> <strong>Donor activeness</strong></div>
-      <div class="progress-tag">This report type is not connected to the backend yet.</div>
-      <div class="progress-tag">Supported now: Donations, Volunteer & duties, Needs & fulfillment.</div>
-    `;
-  }
-
-  function renderError(message) {
-    renderStats("unsupported", {});
-    detailBlock.innerHTML = `
-      <div><i class="bi bi-exclamation-triangle fs-3 me-2"></i> <strong>Report failed</strong></div>
-      <div class="progress-tag">${escapeHtml(message || "Unable to load report.")}</div>
-    `;
-  }
-
-  function wireExportButton(reportType) {
-    const exportBtn = document.getElementById("exportReportCsvBtn");
-    if (!exportBtn) return;
-
-    exportBtn.addEventListener("click", () => {
-      const query = buildQuery(reportType);
-      window.open(`${REPORTS_EXPORT_API}?${query}`, "_blank");
-    });
-  }
-
-  async function loadReport(showFeedback = false) {
-    const mappedType = mapReportType(reportSelect.value);
-
-    if (mappedType === "unsupported_donor_activity") {
-      renderUnsupportedReport();
-      return;
-    }
-
-    try {
-      if (genReportBtn) {
-        genReportBtn.disabled = true;
-        genReportBtn.innerText = "Loading...";
-      }
-
-      const response = await fetch(`${REPORTS_API}?${buildQuery(mappedType)}`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Accept": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load report (${response.status})`);
-      }
-
-      const data = await response.json();
-
-      renderStats(mappedType, data.summary || {});
-
-      detailBlock.innerHTML = `
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <div>
-            <div><i class="bi bi-bar-chart-line fs-3 me-2"></i> <strong>${escapeHtml(data.summary?.title || "Report")}</strong></div>
-            <div class="progress-tag">
-              Period: ${escapeHtml(data.start_date || "-")} to ${escapeHtml(data.end_date || "-")}
-            </div>
-          </div>
-          <div>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="exportReportCsvBtn">
-              <i class="bi bi-download me-1"></i> Export CSV
-            </button>
-          </div>
-        </div>
-
-        ${renderTable(data.headers || [], data.rows || [])}
-      `;
-
-      wireExportButton(mappedType);
-
-      if (showFeedback) {
-        alert("Report generated successfully.");
-      }
-    } catch (error) {
-      console.error("Report load error:", error);
-      renderError(error.message || "Failed to load report.");
-    } finally {
-      if (genReportBtn) {
-        genReportBtn.disabled = false;
-        genReportBtn.innerText = "Generate Report";
-      }
-    }
-  }
-
-  // Optional defaults if those inputs exist
-  if (reportStartDate && !reportStartDate.value) {
-    reportStartDate.value = getFirstDayOfMonthISO();
-  }
-
-  if (reportEndDate && !reportEndDate.value) {
-    reportEndDate.value = getTodayISO();
-  }
-
-  reportSelect.addEventListener('change', () => loadReport(false));
-  reportStartDate?.addEventListener('change', () => loadReport(false));
-  reportEndDate?.addEventListener('change', () => loadReport(false));
-
-  genReportBtn?.addEventListener('click', function (e) {
-    e.preventDefault();
-    loadReport(true);
-  });
-
-  loadReport(false);
-}

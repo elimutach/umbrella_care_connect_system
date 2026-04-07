@@ -1,4 +1,8 @@
 import json
+from functools import wraps
+from accounts.models import UserManagement
+
+from django.views.decorators.http import require_GET
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
@@ -14,11 +18,72 @@ from .models import Donation
 from .forms import DonationForm
 from stock.services import add_stock_from_donation
 
+from django.contrib.auth.decorators import login_required
+from needs.models import NeedRecord
+from .models import Donation, DonorPledge
+from calendarapp.models import CalendarEvent
+from types import SimpleNamespace
 
 def donation_list_view(request):
     donations = Donation.objects.select_related("donor", "need", "recorded_by").order_by("-created_at")
     return render(request, "donations/donation_list.html", {"donations": donations})
 
+DEV_NO_AUTH = False
+
+
+def _pick_dev_donor():
+    donor = UserManagement.objects.filter(role="donor", is_active=True).first()
+    if donor:
+        return donor
+
+    any_user = UserManagement.objects.filter(is_active=True).first()
+    if any_user:
+        return any_user
+
+    return SimpleNamespace(
+        id=None,
+        first_name="Guest",
+        last_name="Donor",
+        username="guest_donor",
+        email="donor@local.test",
+        phone="",
+        role="donor",
+        is_authenticated=True,
+    )
+
+
+def _reject_non_donor(request):
+    if DEV_NO_AUTH:
+        return None
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required."}, status=401)
+
+    if getattr(request.user, "role", None) != "donor":
+        return JsonResponse({"error": "Donor access only."}, status=403)
+
+    return None
+
+
+def session_api_login_required(view_func):
+    @wraps(view_func)
+    def wrapped(request, *args, **kwargs):
+        if DEV_NO_AUTH:
+            request.user = _pick_dev_donor()
+            return view_func(request, *args, **kwargs)
+
+        user_id = request.session.get("user_id")
+        if not user_id:
+            return JsonResponse({"error": "Authentication required"}, status=401)
+
+        user = UserManagement.objects.filter(id=user_id, is_active=True).first()
+        if not user:
+            request.session.flush()
+            return JsonResponse({"error": "Authentication required"}, status=401)
+
+        request.user = user
+        return view_func(request, *args, **kwargs)
+    return wrapped
 
 def donation_create_view(request):
     if request.method == "POST":
@@ -129,6 +194,7 @@ def _serialize_donation(donation, row_number=None):
 
     return {
         "id": str(donation.id),
+        "need_id": str(donation.need_id) if donation.need_id else "",
         "row_number": row_number,
         "donor_name": donor_name,
         "row_label": f"{row_number}. {donor_name}" if row_number else donor_name,
@@ -268,12 +334,20 @@ def donation_api_stats(request):
     total_donations = Donation.objects.count()
     successful_donations = Donation.objects.filter(status__in=successful_statuses).count()
     active_goal_percentage = round((successful_donations / total_donations) * 100) if total_donations else 0
+    successful_cash_count = Donation.objects.filter(
+        donation_type="cash",
+        status__in=successful_statuses,
+    ).count()
+    average_donation = (
+        all_time_total / successful_cash_count if successful_cash_count else Decimal("0.00")
+    )
 
     return JsonResponse({
         "monthly_total": f"KES {monthly_total:,.2f}",
         "active_goal_percentage": f"{active_goal_percentage}%",
         "donor_count": distinct_donors,
         "all_time_total": f"KES {all_time_total:,.2f}",
+        "average_donation": f"KES {average_donation:,.2f}",
     })
 
 
@@ -319,3 +393,359 @@ def donation_api_detail(request, donation_id):
 
     donation.delete()
     return JsonResponse({"success": True})
+
+def _reject_non_donor(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required."}, status=401)
+
+    if getattr(request.user, "role", None) != "donor":
+        return JsonResponse({"error": "Donor access only."}, status=403)
+
+    return None
+
+
+def _serialize_need_for_donor(need):
+    amount_needed = getattr(need, "amount_needed", None)
+    if amount_needed is None:
+        amount_needed = getattr(need, "quantity_required", 0) or 0
+
+    amount_received = getattr(need, "amount_received", None)
+    if amount_received is None:
+        amount_received = getattr(need, "quantity_fulfilled", 0) or 0
+
+    donor_count = getattr(need, "number_of_donors", None)
+    try:
+        donor_count = int(donor_count or 0)
+    except (TypeError, ValueError):
+        donor_count = 0
+
+    if donor_count == 0 and isinstance(getattr(need, "donors", None), list):
+        donor_count = len(need.donors)
+
+    percent = 0
+    try:
+        needed_num = float(amount_needed or 0)
+        received_num = float(amount_received or 0)
+        percent = round((received_num / needed_num) * 100) if needed_num > 0 else 0
+    except (TypeError, ValueError, ZeroDivisionError):
+        percent = 0
+
+    created_at = getattr(need, "created_at", None)
+    expiring_at = getattr(need, "expiring_at", None)
+    date_value = getattr(need, "date", None)
+
+    return {
+        "id": str(need.id),
+        "needs_registration_code": getattr(need, "needs_registration_code", "") or "",
+        "title": getattr(need, "title", "") or "Untitled need",
+        "description": getattr(need, "description", "") or "",
+        "status": getattr(need, "status", "pending") or "pending",
+        "need_type": getattr(need, "need_type", "cash") or "cash",
+        "unit": getattr(need, "unit", "units") or "units",
+        "image_url": getattr(need, "image_url", "") or "",
+        "amount_needed": float(amount_needed or 0),
+        "amount_received": float(amount_received or 0),
+        "donor_count": donor_count,
+        "progress_percent": percent,
+        "date": date_value.isoformat() if hasattr(date_value, "isoformat") else (date_value or ""),
+        "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else "",
+        "expiring_at": expiring_at.isoformat() if hasattr(expiring_at, "isoformat") else "",
+    }
+
+
+def _serialize_pledge(pledge):
+    return {
+        "id": str(pledge.id),
+        "need_id": str(pledge.need_id) if pledge.need_id else None,
+        "title": getattr(pledge.need, "title", None) or "Untitled need",
+        "amount": float(pledge.amount or 0),
+        "amount_label": f"KES {pledge.amount:,.2f}",
+        "frequency": pledge.frequency,
+        "start_date": pledge.start_date.isoformat() if pledge.start_date else None,
+        "next_due_date": pledge.next_due_date.isoformat() if pledge.next_due_date else None,
+        "status": pledge.status,
+        "notes": pledge.notes or "",
+        "created_at": pledge.created_at.isoformat() if pledge.created_at else None,
+    }
+
+
+
+@require_http_methods(["GET"])
+@session_api_login_required
+def donor_needs_api(request):
+    rejected = _reject_non_donor(request)
+    if rejected:
+        return rejected
+
+    queryset = NeedRecord.objects.all().order_by("-created_at")
+
+    search = request.GET.get("search", "").strip()
+    if search:
+        queryset = queryset.filter(
+            Q(title__icontains=search)
+            | Q(description__icontains=search)
+            | Q(needs_registration_code__icontains=search)
+        )
+
+    status_value = request.GET.get("status", "all").strip()
+    if status_value and status_value != "all":
+        queryset = queryset.filter(status=status_value)
+
+    need_type = request.GET.get("need_type", "").strip()
+    if need_type:
+        queryset = queryset.filter(need_type=need_type)
+
+    results = [_serialize_need_for_donor(item) for item in queryset]
+
+    return JsonResponse({
+        "count": len(results),
+        "results": results,
+    })
+
+
+@require_http_methods(["GET"])
+@session_api_login_required
+def donor_history_api(request):
+    rejected = _reject_non_donor(request)
+    if rejected:
+        return rejected
+
+    queryset = (
+        Donation.objects
+        .select_related("donor", "need", "recorded_by")
+        .filter(donor_id=request.user.id)
+        .order_by("-created_at")
+    )
+
+    results = []
+    for index, donation in enumerate(queryset, start=1):
+        row = _serialize_donation(donation, row_number=index)
+        row["donation_type"] = donation.donation_type
+        row["amount_value"] = float(donation.amount or 0) if donation.amount is not None else 0
+        row["quantity_value"] = float(donation.quantity or 0) if donation.quantity is not None else 0
+        row["unit"] = donation.unit or ""
+        row["item_name"] = donation.item_name or ""
+        results.append(row)
+
+    return JsonResponse({
+        "count": len(results),
+        "results": results,
+    })
+
+
+@require_http_methods(["GET"])
+@session_api_login_required
+def donor_stats_api(request):
+    rejected = _reject_non_donor(request)
+    if rejected:
+        return rejected
+
+    successful_statuses = ["confirmed", "received"]
+    donor_id = request.user.id
+    today = timezone.localdate()
+
+    successful_cash = Donation.objects.filter(
+        donor_id=donor_id,
+        donation_type="cash",
+        status__in=successful_statuses,
+    )
+
+    total_donated = successful_cash.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+    active_pledges = DonorPledge.objects.filter(
+        donor_id=donor_id,
+        status="active",
+    ).count()
+
+    needs_supported = (
+        Donation.objects.filter(
+            donor_id=donor_id,
+            status__in=successful_statuses,
+        )
+        .exclude(need_id__isnull=True)
+        .values("need_id")
+        .distinct()
+        .count()
+    )
+
+    upcoming_events = CalendarEvent.objects.filter(
+        Q(status__in=["scheduled", "tentative"]),
+        Q(end_date__gte=today) | Q(end_date__isnull=True, start_date__gte=today),
+    ).count()
+
+    return JsonResponse({
+        "total_donated": float(total_donated),
+        "total_donated_label": f"KES {total_donated:,.2f}",
+        "active_pledges": active_pledges,
+        "needs_supported": needs_supported,
+        "upcoming_events": upcoming_events,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@session_api_login_required
+def donor_submit_donation_api(request):
+    rejected = _reject_non_donor(request)
+    if rejected:
+        return rejected
+
+    payload = json.loads(request.body or "{}")
+    need_id = payload.get("need_id")
+
+    if not need_id:
+        return JsonResponse({"error": "Need is required."}, status=400)
+
+    need = get_object_or_404(NeedRecord, id=need_id)
+
+    donation_type = (payload.get("donation_type") or getattr(need, "need_type", "cash")).strip()
+    if donation_type not in dict(Donation.DONATION_TYPE_CHOICES):
+        return JsonResponse({"error": "Invalid donation type."}, status=400)
+
+    if getattr(need, "need_type", donation_type) != donation_type:
+        return JsonResponse(
+            {"error": f"This need only accepts {getattr(need, 'need_type', donation_type)} donations."},
+            status=400,
+        )
+
+    notes = (payload.get("notes") or "").strip()
+
+    donation_kwargs = {
+        "donor": request.user,
+        "need": need,
+        "source": "donor",
+        "donation_type": donation_type,
+        "status": "pending",
+        "donation_date": timezone.now().date(),
+        "notes": notes,
+        "created_at": timezone.now(),
+        "updated_at": timezone.now(),
+    }
+
+    if donation_type == "cash":
+        amount = _to_decimal(payload.get("amount"))
+        if amount is None or amount <= 0:
+            return JsonResponse({"error": "Enter a valid cash amount."}, status=400)
+
+        donation_kwargs["amount"] = amount
+    else:
+        quantity = _to_decimal(payload.get("quantity"))
+        item_name = (payload.get("item_name") or "").strip()
+        unit = (payload.get("unit") or getattr(need, "unit", "units") or "units").strip()
+        item_description = (payload.get("item_description") or "").strip()
+
+        if quantity is None or quantity <= 0:
+            return JsonResponse({"error": "Enter a valid quantity."}, status=400)
+
+        if not item_name:
+            return JsonResponse({"error": "Item name is required for in-kind donations."}, status=400)
+
+        donation_kwargs["quantity"] = quantity
+        donation_kwargs["item_name"] = item_name
+        donation_kwargs["unit"] = unit
+        donation_kwargs["item_description"] = item_description
+
+    donation = Donation.objects.create(**donation_kwargs)
+
+    row = _serialize_donation(donation)
+    row["donation_type"] = donation.donation_type
+    row["amount_value"] = float(donation.amount or 0) if donation.amount is not None else 0
+    row["quantity_value"] = float(donation.quantity or 0) if donation.quantity is not None else 0
+    row["unit"] = donation.unit or ""
+    row["item_name"] = donation.item_name or ""
+
+    return JsonResponse({
+        "success": True,
+        "message": "Donation submitted successfully.",
+        "donation": row,
+    }, status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@session_api_login_required
+def donor_pledges_api(request):
+    rejected = _reject_non_donor(request)
+    if rejected:
+        return rejected
+
+    if request.method == "GET":
+        queryset = (
+            DonorPledge.objects
+            .select_related("need", "donor")
+            .filter(donor_id=request.user.id)
+            .order_by("-created_at")
+        )
+
+        active = []
+        past = []
+
+        for pledge in queryset:
+            row = _serialize_pledge(pledge)
+            if pledge.status == "active":
+                active.append(row)
+            else:
+                past.append(row)
+
+        return JsonResponse({
+            "active": active,
+            "past": past,
+        })
+
+    payload = json.loads(request.body or "{}")
+    need_id = payload.get("need_id")
+    amount = _to_decimal(payload.get("amount"))
+    frequency = (payload.get("frequency") or "").strip().lower()
+    start_date = payload.get("start_date")
+    notes = (payload.get("notes") or "").strip()
+
+    if not need_id:
+        return JsonResponse({"error": "Need is required."}, status=400)
+
+    if amount is None or amount <= 0:
+        return JsonResponse({"error": "Enter a valid pledge amount."}, status=400)
+
+    valid_frequencies = dict(DonorPledge.FREQUENCY_CHOICES)
+    if frequency not in valid_frequencies:
+        return JsonResponse({"error": "Invalid pledge frequency."}, status=400)
+
+    need = get_object_or_404(NeedRecord, id=need_id)
+
+    if getattr(need, "need_type", "cash") != "cash":
+        return JsonResponse({"error": "Only cash needs can be pledged."}, status=400)
+
+    if start_date:
+        try:
+            start_date_obj = timezone.datetime.fromisoformat(start_date).date()
+        except ValueError:
+            return JsonResponse({"error": "Invalid start date."}, status=400)
+    else:
+        start_date_obj = timezone.now().date()
+
+    if frequency == "weekly":
+        next_due_date = start_date_obj + timezone.timedelta(days=7)
+    elif frequency == "biweekly":
+        next_due_date = start_date_obj + timezone.timedelta(days=14)
+    elif frequency == "monthly":
+        next_due_date = start_date_obj + timezone.timedelta(days=30)
+    else:
+        next_due_date = start_date_obj + timezone.timedelta(days=90)
+
+    pledge = DonorPledge.objects.create(
+        donor=request.user,
+        need=need,
+        amount=amount,
+        frequency=frequency,
+        start_date=start_date_obj,
+        next_due_date=next_due_date,
+        status="active",
+        notes=notes,
+        created_at=timezone.now(),
+        updated_at=timezone.now(),
+    )
+
+    return JsonResponse({
+        "success": True,
+        "message": "Pledge created successfully.",
+        "pledge": _serialize_pledge(pledge),
+    }, status=201)

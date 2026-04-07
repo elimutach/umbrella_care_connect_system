@@ -158,13 +158,22 @@ def build_volunteers_report(start_date, end_date):
             or str(user)
         )
 
+        event_date = (
+        getattr(obj.event, "event_date", None)
+        or getattr(obj.event, "date", None)
+        or getattr(obj.event, "start_date", None)
+        or "-"
+        )
+
+        phone = getattr(user, "phone", None) or "-"
+
         rows.append([
             volunteer_name,
             getattr(user, "email", "-"),
-            obj.volunteer.phone or "-",
-            obj.event.title,
-            str(obj.event.event_date),
-            obj.event.location or "-",
+            phone,
+            getattr(obj.event, "title", "-"),
+            str(event_date),
+            getattr(obj.event, "location", "-") or "-",
             obj.status,
             str(obj.created_at),
         ])

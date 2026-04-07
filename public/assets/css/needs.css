@@ -69,7 +69,7 @@ textarea {
 }
 
 .needs-header {
-  padding: 24px 0 8px;
+  padding: 110px 0 8px;
 }
 
 .needs-header-top {
@@ -201,7 +201,7 @@ textarea {
 
 .needs-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 3fr));
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 22px;
 }
 
@@ -215,6 +215,7 @@ textarea {
   flex-direction: column;
   height: auto;
   width: 100%;
+  min-width: 0;
 }
 
 .need-card-media {
@@ -256,6 +257,7 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .need-title {
@@ -264,6 +266,8 @@ textarea {
   line-height: 1.2;
   font-weight: 900;
   text-transform: uppercase;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .need-date {
@@ -286,7 +290,7 @@ body.dark-mode .need-desc {
 
 .need-meta {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   align-items: center;
 }
@@ -303,18 +307,31 @@ body.dark-mode .need-desc {
 }
 
 .need-meta-highlight {
+  display: inline-block;
   color: var(--brand-dark);
   font-size: 1rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .need-progress-row {
   text-align: center;
   font-size: 1rem;
   font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .need-progress-row .raised {
   color: var(--brand-dark);
+}
+
+.need-remaining {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-top: -6px;
 }
 
 .progress-track {
@@ -345,7 +362,7 @@ body.dark-mode .amount-title {
 
 .amount-options {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
   gap: 10px;
 }
 
@@ -360,6 +377,8 @@ body.dark-mode .amount-title {
 }
 
 .amount-option span {
+  width: 100%;
+  min-width: 0;
   height: 48px;
   display: grid;
   place-items: center;
@@ -369,7 +388,9 @@ body.dark-mode .amount-title {
   font-weight: 700;
   cursor: pointer;
   transition: 0.2s ease;
-  padding: 0 8px;
+  padding: 0 14px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .amount-option.kes-50 span { border-color: #f04a47; }
@@ -383,14 +404,36 @@ body.dark-mode .amount-title {
   box-shadow: 0 0 0 4px rgba(16, 161, 29, 0.15);
 }
 
+.need-kind-callout {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--brand-soft) 42%, var(--white) 58%);
+  padding: 14px 16px;
+  display: grid;
+  gap: 5px;
+  text-align: center;
+}
+
+.need-kind-callout strong {
+  color: var(--brand-dark);
+  font-weight: 900;
+}
+
+.need-kind-callout span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 .action-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
   gap: 16px;
   margin-top: 2px;
 }
 
 .action-btn {
+  min-width: 0;
   height: 54px;
   border-radius: 999px;
   border: none;
@@ -398,10 +441,18 @@ body.dark-mode .amount-title {
   font-weight: 900;
   cursor: pointer;
   transition: 0.2s ease;
+  padding: 0 16px;
+  white-space: nowrap;
 }
 
 .action-btn:hover {
   transform: translateY(-1px);
+}
+
+.action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
 }
 
 .btn-pledge {
@@ -501,13 +552,13 @@ body.dark-mode .btn-details {
 
 @media (max-width: 1600px) {
   .needs-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   }
 }
 
 @media (max-width: 1300px) {
   .needs-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   }
 }
 
@@ -518,7 +569,7 @@ body.dark-mode .btn-details {
 
   .amount-options,
   .action-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }
 
@@ -528,6 +579,11 @@ body.dark-mode .btn-details {
   }
 
   .needs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .amount-options,
+  .action-row {
     grid-template-columns: 1fr;
   }
 

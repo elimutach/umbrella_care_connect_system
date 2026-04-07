@@ -11,9 +11,10 @@
   <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/needs.css" />
+  <link rel="stylesheet" href="assets/css/main.css" />
   <script src="assets/js/client-navbar.js" type="text/javascript" defer></script>
   <style>
-    .details-shell { padding: 34px 0 90px; }
+    .details-shell { padding: 110px 0 90px; }
     .details-layout {
       display: grid;
       grid-template-columns: 1.25fr 0.75fr;
@@ -164,6 +165,7 @@
   </style>
 </head>
 <body class="light-mode">
+  <main-navbar-component></main-navbar-component>
   <div class="container details-shell">
     <div class="details-layout">
       <section class="details-card details-main" id="detailsMain">
@@ -214,7 +216,7 @@
           <div class="details-actions">
             <button class="action-btn btn-pledge" id="sidePledgeBtn">Pledge</button>
             <button class="action-btn btn-donate" id="sideDonateBtn">Donate</button>
-            <button class="action-btn btn-details" onclick="window.location.href='needs.html'">Back to needs</button>
+            <button class="action-btn btn-details" onclick="window.location.href='/needs/'">Back to needs</button>
           </div>
         </div>
 
@@ -245,11 +247,11 @@
     </div>
   </div>
 
-  <script src="needs.js"></script>
+  <script src="assets/js/public-needs.js"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const needId = params.get("need") || localStorage.getItem("selectedNeedId");
-    const selectedNeed = (window.UMBRELLA_NEEDS || []).find(item => item.id === needId);
+    let selectedNeed = null;
 
     const detailsImage = document.getElementById("detailsImage");
     const detailsStatus = document.getElementById("detailsStatus");
@@ -286,11 +288,12 @@
 
     function renderDetails() {
       if (!selectedNeed) {
-        document.body.innerHTML = '<div class="container" style="padding:40px 0;"><div class="no-results">Need not found. <a href="needs.html">Return to needs</a>.</div></div>';
+        document.body.innerHTML = '<div class="container" style="padding:40px 0;"><div class="no-results">Need not found. <a href="/needs/">Return to needs</a>.</div></div>';
         return;
       }
 
-      const percentage = Math.min(100, Math.round((selectedNeed.raised / selectedNeed.goal) * 100));
+      const escapeHTML = window.UMBRELLA_NEEDS_API.escapeHTML;
+      const percentage = selectedNeed.progressPercent;
 
       detailsImage.src = selectedNeed.image;
       detailsImage.alt = selectedNeed.title;
@@ -298,10 +301,10 @@
       detailsTitle.textContent = selectedNeed.title;
       detailsDate.textContent = `Date: ${selectedNeed.date}`;
       detailsDescription.textContent = selectedNeed.description;
-      detailsGoal.textContent = window.UMBRELLA_UTILS.formatKES(selectedNeed.goal);
-      detailsRaised.textContent = window.UMBRELLA_UTILS.formatKES(selectedNeed.raised);
+      detailsGoal.textContent = selectedNeed.amountNeededDisplay;
+      detailsRaised.textContent = selectedNeed.amountReceivedDisplay;
       detailsDonors.textContent = selectedNeed.donors.toLocaleString("en-KE");
-      detailsProgressText.innerHTML = `<span class="raised">${window.UMBRELLA_UTILS.formatKES(selectedNeed.raised)}</span> out of ${selectedNeed.goal.toLocaleString("en-KE")}`;
+      detailsProgressText.innerHTML = `<span class="raised">${escapeHTML(selectedNeed.amountReceivedDisplay)}</span> out of ${escapeHTML(selectedNeed.amountNeededDisplay)}`;
       detailsProgressFill.style.width = percentage + "%";
 
       whyGiveText.textContent = `This need directly improves the children's quality of life. Funding ${selectedNeed.title.toLowerCase()} is not cosmetic. It solves an actual operational gap at the home, reduces risk, improves dignity and stabilizes daily care.`
@@ -318,19 +321,20 @@
       }).join("");
 
       updatesList.innerHTML = selectedNeed.updates.map(item => `
-        <div class="update-item">${item}</div>
+        <div class="update-item">${escapeHTML(item)}</div>
       `).join("");
 
       commentsList.innerHTML = selectedNeed.comments.map(item => `
         <div class="comment-item">
-          <strong>${item.name}</strong>
-          <span>${item.text}</span>
+          <strong>${escapeHTML(item.name || "Supporter")}</strong>
+          <span>${escapeHTML(item.text || item)}</span>
         </div>
       `).join("");
     }
 
     commentForm.addEventListener("submit", (e) => {
       e.preventDefault();
+      if (!selectedNeed) return;
       const value = commentInput.value.trim();
 
       if (!value) {
@@ -352,13 +356,15 @@
     });
 
     sidePledgeBtn.addEventListener("click", () => {
+      if (!selectedNeed) return;
       localStorage.setItem("selectedNeedId", selectedNeed.id);
-      window.location.href = `pledge.html?need=${encodeURIComponent(selectedNeed.id)}`;
+      window.location.href = `/pledge/?need=${encodeURIComponent(selectedNeed.id)}`;
     });
 
     sideDonateBtn.addEventListener("click", () => {
+      if (!selectedNeed) return;
       localStorage.setItem("selectedNeedId", selectedNeed.id);
-      window.location.href = `donate.html?need=${encodeURIComponent(selectedNeed.id)}&mode=custom`;
+      window.location.href = `/donate/?need=${encodeURIComponent(selectedNeed.id)}&mode=custom`;
     });
 
     detailModalClose.addEventListener("click", () => {
@@ -369,7 +375,14 @@
       if (e.target === detailModal) detailModal.classList.add("hidden");
     });
 
-    renderDetails();
+    function initDetails() {
+      window.UMBRELLA_NEEDS_API.getNeedById(needId).then(function (need) {
+        selectedNeed = need;
+        renderDetails();
+      });
+    }
+
+    initDetails();
   </script>
 </body>
 </html>

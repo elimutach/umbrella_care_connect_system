@@ -81,231 +81,9 @@
     </section>
 
     <section class="app-page" data-page="dashboard">
-      <div class="page-header-card dashboard-home-header-card">
-        <div class="dashboard-home-hero">
-          <div class="dashboard-home-hero-copy">
-            <div class="panel-title mb-2"><i class="bi bi-speedometer2"></i> Dashboard Command Center</div>
-            <p class="text-mute mb-0 dashboard-home-hero-text">
-              A live operational summary of donations, needs, volunteers, stock, reports, and calendar execution for the day.
-            </p>
-          </div>
-
-          <div class="dashboard-home-hero-actions">
-            <button class="dashboard-ghost-btn" type="button" data-go-page="reports">
-              <i class="bi bi-bar-chart-line"></i> Open reports
-            </button>
-            <button class="btn-user-add" id="dashboardQuickScheduleBtn" type="button">
-              <i class="bi bi-plus-lg"></i> Add today's schedule
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="dashboard-home-shell">
-        <div class="dashboard-summary-grid">
-          <article class="dashboard-kpi-card primary">
-            <div class="dashboard-kpi-top">
-              <span class="dashboard-kpi-icon"><i class="bi bi-basket2"></i></span>
-              <span class="dashboard-kpi-badge" id="dashboardNeedsTrend">Live</span>
-            </div>
-            <div class="dashboard-kpi-label">Active needs</div>
-            <div class="dashboard-kpi-value" id="dashboardActiveNeedsValue">0</div>
-            <div class="dashboard-kpi-meta">
-              <span id="dashboardNeedsMeta">0 total needs tracked</span>
-              <span id="dashboardNeedFulfillmentMeta">0% fulfilled</span>
-            </div>
-          </article>
-
-          <article class="dashboard-kpi-card success">
-            <div class="dashboard-kpi-top">
-              <span class="dashboard-kpi-icon"><i class="bi bi-cash-coin"></i></span>
-              <span class="dashboard-kpi-badge" id="dashboardDonationsTrend">This month</span>
-            </div>
-            <div class="dashboard-kpi-label">Donation intake</div>
-            <div class="dashboard-kpi-value" id="dashboardDonationValue">KES 0</div>
-            <div class="dashboard-kpi-meta">
-              <span id="dashboardDonationMeta">0 donors</span>
-              <span id="dashboardDonationGoalMeta">0% of goal</span>
-            </div>
-          </article>
-
-          <article class="dashboard-kpi-card info">
-            <div class="dashboard-kpi-top">
-              <span class="dashboard-kpi-icon"><i class="bi bi-people"></i></span>
-              <span class="dashboard-kpi-badge">Team</span>
-            </div>
-            <div class="dashboard-kpi-label">Active volunteers</div>
-            <div class="dashboard-kpi-value" id="dashboardVolunteerValue">0</div>
-            <div class="dashboard-kpi-meta">
-              <span id="dashboardVolunteerMeta">0 volunteer records</span>
-              <span id="dashboardVolunteerSignupMeta">0 signups total</span>
-            </div>
-          </article>
-
-          <article class="dashboard-kpi-card warning">
-            <div class="dashboard-kpi-top">
-              <span class="dashboard-kpi-icon"><i class="bi bi-calendar3"></i></span>
-              <span class="dashboard-kpi-badge" id="dashboardTodayLabel">Today</span>
-            </div>
-            <div class="dashboard-kpi-label">Today's schedule</div>
-            <div class="dashboard-kpi-value" id="dashboardTodayEventsValue">0</div>
-            <div class="dashboard-kpi-meta">
-              <span id="dashboardUpcomingMeta">No upcoming events</span>
-              <span id="dashboardCurrentDateText">--</span>
-            </div>
-          </article>
-        </div>
-
-        <div class="dashboard-home-main-grid">
-          <div class="dashboard-home-left-col">
-            <section class="panel dashboard-insight-panel dashboard-chart-panel">
-              <div class="dashboard-panel-head">
-                <div>
-                  <div class="panel-title mb-2"><i class="bi bi-graph-up-arrow"></i> Weekly operational pulse</div>
-                  <p class="text-mute mb-0">At-a-glance movement across donations, needs, volunteer effort, and schedule load.</p>
-                </div>
-                <div class="dashboard-inline-pill" id="dashboardWeekSummary">Live summary</div>
-              </div>
-
-              <div class="dashboard-performance-grid">
-                <div class="dashboard-performance-metrics">
-                  <div class="dashboard-performance-card">
-                    <span>Needs fulfillment</span>
-                    <strong id="dashboardFulfillmentScore">0%</strong>
-                    <small id="dashboardFulfillmentCaption">Waiting for live data</small>
-                  </div>
-                  <div class="dashboard-performance-card">
-                    <span>Donor momentum</span>
-                    <strong id="dashboardDonorScore">0%</strong>
-                    <small id="dashboardDonorCaption">Waiting for live data</small>
-                  </div>
-                  <div class="dashboard-performance-card">
-                    <span>Volunteer coverage</span>
-                    <strong id="dashboardVolunteerScore">0%</strong>
-                    <small id="dashboardVolunteerCaption">Waiting for live data</small>
-                  </div>
-                </div>
-
-                <div class="dashboard-bars-card">
-                  <div class="dashboard-bars-head">
-                    <h4>Execution mix</h4>
-                    <span class="text-mute">Last 7 days</span>
-                  </div>
-                  <div class="dashboard-bars-legend">
-                    <span><i class="bi bi-circle-fill"></i> Needs</span>
-                    <span><i class="bi bi-circle-fill"></i> Donations</span>
-                    <span><i class="bi bi-circle-fill"></i> Volunteers</span>
-                  </div>
-                  <div class="dashboard-week-bars" id="dashboardWeekBars"></div>
-                </div>
-              </div>
-            </section>
-
-            <section class="dashboard-shortcuts-grid">
-              <button class="dashboard-shortcut-card" type="button" data-go-page="needs">
-                <span class="dashboard-shortcut-icon"><i class="bi bi-basket2"></i></span>
-                <div>
-                  <strong>Needs</strong>
-                  <p>Review urgent requests, fulfillment status, and edit posted needs.</p>
-                </div>
-              </button>
-
-              <button class="dashboard-shortcut-card" type="button" data-go-page="donations">
-                <span class="dashboard-shortcut-icon"><i class="bi bi-cash-stack"></i></span>
-                <div>
-                  <strong>Donations</strong>
-                  <p>Track donor activity, payments, favorites, and conversion flow.</p>
-                </div>
-              </button>
-
-              <button class="dashboard-shortcut-card" type="button" data-go-page="volunteers">
-                <span class="dashboard-shortcut-icon"><i class="bi bi-people-fill"></i></span>
-                <div>
-                  <strong>Volunteers</strong>
-                  <p>View signups, attendance strength, and deployment readiness.</p>
-                </div>
-              </button>
-
-              <button class="dashboard-shortcut-card" type="button" data-go-page="calendar">
-                <span class="dashboard-shortcut-icon"><i class="bi bi-calendar-week"></i></span>
-                <div>
-                  <strong>Calendar</strong>
-                  <p>Check upcoming schedule, move events, and plan day execution.</p>
-                </div>
-              </button>
-
-              <button class="dashboard-shortcut-card" type="button" data-go-page="stock">
-                <span class="dashboard-shortcut-icon"><i class="bi bi-box-seam"></i></span>
-                <div>
-                  <strong>Stock</strong>
-                  <p>Watch item levels, recent transactions, and low-stock pressure.</p>
-                </div>
-              </button>
-
-              <button class="dashboard-shortcut-card" type="button" data-go-page="user-management">
-                <span class="dashboard-shortcut-icon"><i class="bi bi-person-gear"></i></span>
-                <div>
-                  <strong>Users</strong>
-                  <p>Manage roles, account health, onboarding, and access control.</p>
-                </div>
-              </button>
-            </section>
-          </div>
-
-          <aside class="dashboard-home-right-col">
-            <section class="panel dashboard-insight-panel dashboard-schedule-panel">
-              <div class="dashboard-panel-head compact">
-                <div>
-                  <div class="panel-title mb-2"><i class="bi bi-clock-history"></i> Today's schedule</div>
-                  <p class="text-mute mb-0">Priority agenda and next execution block.</p>
-                </div>
-                <button class="dashboard-link-btn" type="button" data-go-page="calendar">Full calendar</button>
-              </div>
-
-              <div class="dashboard-current-day-chip" id="dashboardCurrentDayChip">Loading date...</div>
-              <div class="dashboard-schedule-list" id="dashboardTodayScheduleList"></div>
-            </section>
-
-            <section class="panel dashboard-insight-panel dashboard-quick-actions-panel">
-              <div class="dashboard-panel-head compact">
-                <div>
-                  <div class="panel-title mb-2"><i class="bi bi-lightning-charge"></i> Quick actions</div>
-                  <p class="text-mute mb-0">Fast operational shortcuts for daily admin work.</p>
-                </div>
-              </div>
-
-              <div class="dashboard-action-stack">
-                <button class="dashboard-action-btn" type="button" id="dashboardActionAddEvent">
-                  <i class="bi bi-calendar-plus"></i>
-                  <span>Add a calendar event</span>
-                </button>
-                <button class="dashboard-action-btn" type="button" data-go-page="needs">
-                  <i class="bi bi-plus-square"></i>
-                  <span>Post or update a need</span>
-                </button>
-                <button class="dashboard-action-btn" type="button" data-go-page="donations">
-                  <i class="bi bi-wallet2"></i>
-                  <span>Review donation pipeline</span>
-                </button>
-                <button class="dashboard-action-btn" type="button" data-go-page="reports">
-                  <i class="bi bi-file-earmark-bar-graph"></i>
-                  <span>Generate performance report</span>
-                </button>
-              </div>
-            </section>
-
-            <section class="panel dashboard-insight-panel dashboard-focus-panel">
-              <div class="dashboard-panel-head compact">
-                <div>
-                  <div class="panel-title mb-2"><i class="bi bi-stars"></i> Priority watch</div>
-                  <p class="text-mute mb-0">Closest deadlines and operational pressure points.</p>
-                </div>
-              </div>
-
-              <div class="dashboard-priority-list" id="dashboardPriorityList"></div>
-            </section>
-          </aside>
-        </div>
+      <div class="page-header-card">
+        <div class="panel-title"><i class="bi bi-speedometer2"></i> Dashboard</div>
+        <p class="text-mute mb-0">Main operational dashboard page. Add your live widgets, charts and cards here.</p>
       </div>
     </section>
 
@@ -566,48 +344,83 @@
   </div>
 </section>
 
-    <section class="app-page" data-page="reports">
-        <div class="page-header-card">
-        <div class="panel-title"><i class="bi bi-file-spreadsheet" style="color:var(--brand);"></i> Reports & analytics</div>
+  <section class="app-page" data-page="reports">
+  <div class="report-page">
+    <div class="reports-header">
+      <div>
+        <h2><i class="bi bi-file-earmark-bar-graph me-2"></i>Report Generation</h2>
+        <p class="text-mute">Generate donations, needs, and volunteer reports.</p>
       </div>
-      <div class="reports-section mt-10">
-        <div class="reports-header">
-          <h3><i class="bi bi-file-spreadsheet" style="color:var(--brand);"></i> Reports & analytics</h3>
-          <div class="dropdown-group">
-            <select class="dropdown-custom" id="reportType">
-              <option selected>Donations report</option>
-              <option>Volunteer & duties</option>
-              <option>Needs & fulfillment</option>
-              <option>Donor activeness</option>
-              <option>Stock / inventory</option>
-              <option>Financial summary</option>
-            </select>
-            <select class="dropdown-custom">
-              <option>Last 30 days</option>
-              <option>This quarter</option>
-              <option>Year to date</option>
-              <option>Custom range</option>
-            </select>
-            <button class="btn-generate" id="genReportBtn"><i class="bi bi-file-earmark-pdf me-2"></i>Generate</button>
-          </div>
-        </div>
 
-        <div class="report-cards" id="reportCards">
-          <div class="report-mini"><span class="title">Total Donations</span><span class="figure" id="stat1">486</span><span class="text-mute d-block">this month</span></div>
-          <div class="report-mini"><span class="title">Needs fulfilled</span><span class="figure" id="stat2">34</span><span class="text-mute d-block">of 52</span></div>
-          <div class="report-mini"><span class="title">Volunteer hrs</span><span class="figure" id="stat3">212</span><span class="text-mute d-block">this quarter</span></div>
-          <div class="report-mini"><span class="title">Active donors</span><span class="figure" id="stat4">142</span><span class="text-mute d-block">↑12%</span></div>
-          <div class="report-mini"><span class="title">Duty signups</span><span class="figure" id="stat5">29</span><span class="text-mute d-block">pending 7</span></div>
-        </div>
+      <div class="dropdown-group">
+        <select class="dropdown-custom" id="reportType">
+          <option value="donations" selected>Donations</option>
+          <option value="needs">Needs & fulfillment</option>
+          <option value="volunteers">Volunteer participation</option>
+        </select>
 
-        <div class="vol-activeness" id="detailedReportBlock">
-          <div><i class="bi bi-person-check fs-3 me-2"></i> <strong>Volunteer activeness (last 30d)</strong></div>
-          <div class="progress-tag"><i class="bi bi-calendar-week"></i> 18 active volunteers · 42 duties completed</div>
-          <div class="progress-tag"><i class="bi bi-graph-up-arrow"></i> 86% attendance rate</div>
-          <div class="ms-auto"><i class="bi bi-download"></i> export raw</div>
-        </div>
+        <input type="date" id="reportStartDate" class="dropdown-custom" />
+        <input type="date" id="reportEndDate" class="dropdown-custom" />
+
+        <button class="btn-generate" id="genReportBtn" type="button">
+          <i class="bi bi-bar-chart-line me-2"></i>Generate
+        </button>
+
+        <button class="btn-generate btn-export" id="exportCsvBtn" type="button">
+          <i class="bi bi-download me-2"></i>Export CSV
+        </button>
       </div>
-    </section>
+    </div>
+
+    <div class="report-cards" id="reportCards">
+      <div class="report-mini">
+        <span class="title">Metric 1</span>
+        <span class="figure" id="stat1">—</span>
+        <span class="text-mute d-block">summary</span>
+      </div>
+
+      <div class="report-mini">
+        <span class="title">Metric 2</span>
+        <span class="figure" id="stat2">—</span>
+        <span class="text-mute d-block">summary</span>
+      </div>
+
+      <div class="report-mini">
+        <span class="title">Metric 3</span>
+        <span class="figure" id="stat3">—</span>
+        <span class="text-mute d-block">summary</span>
+      </div>
+
+      <div class="report-mini">
+        <span class="title">Metric 4</span>
+        <span class="figure" id="stat4">—</span>
+        <span class="text-mute d-block">summary</span>
+      </div>
+
+      <div class="report-mini">
+        <span class="title">Metric 5</span>
+        <span class="figure" id="stat5">—</span>
+        <span class="text-mute d-block">summary</span>
+      </div>
+    </div>
+
+    <div class="report-detail-card" id="detailedReportBlock">
+      <div class="report-placeholder">
+        <i class="bi bi-sliders2 me-2"></i>
+        Select a report and click Generate.
+      </div>
+    </div>
+
+    <div class="report-table-card">
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle mb-0" id="reportTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
 
     <section class="app-page" data-page="user-management">
   <div class="page-header-card">
@@ -1500,7 +1313,7 @@
 
           <div class="needs-form-group">
             <label for="needUnit">Unit</label>
-            <input type="text" id="needUnit" class="form-control" placeholder="e.g. beds, items, KES">
+            <input type="text" id="needUnit" class="form-control" placeholder="e.g. blankets, bags, books">
           </div>
 
          

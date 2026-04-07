@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="assets/css/main.css" />
   <script src="assets/js/client-navbar.js" type="text/javascript" defer></script>
   <style>
-    .flow-shell { padding: 34px 0 90px; }
+    .flow-shell { padding: 110px 0 90px; }
     .flow-card {
       width: min(920px, 100%);
       margin: 0 auto;
@@ -160,7 +160,7 @@
     </div>
   </div>
 
-  <script src="needs.js"></script>
+  <script src="assets/js/public-needs.js"></script>
   <script>
     const donateModal = document.getElementById("donateModal");
     const donateModalCard = document.getElementById("donateModalCard");
@@ -177,7 +177,7 @@
     const needId = params.get("need") || localStorage.getItem("selectedNeedId");
     const urlAmount = params.get("amount");
     const savedAmount = localStorage.getItem("selectedAmount");
-    const selectedNeed = (window.UMBRELLA_NEEDS || []).find(item => item.id === needId);
+    let selectedNeed = null;
 
     function openDonationModal(type, title, text) {
       donateModalCard.classList.remove("error");
@@ -204,10 +204,11 @@
         return;
       }
 
+      const escapeHTML = window.UMBRELLA_NEEDS_API.escapeHTML;
       donateNeedBox.innerHTML = `
-        <h3>You are donating toward: ${selectedNeed.title}</h3>
-        <p>${selectedNeed.description}</p>
-        <p><strong>Current progress:</strong> ${window.UMBRELLA_UTILS.formatKES(selectedNeed.raised)} raised out of ${selectedNeed.goal.toLocaleString("en-KE")}</p>
+        <h3>You are donating toward: ${escapeHTML(selectedNeed.title)}</h3>
+        <p>${escapeHTML(selectedNeed.description)}</p>
+        <p><strong>Current progress:</strong> ${escapeHTML(selectedNeed.amountReceivedDisplay)} raised out of ${escapeHTML(selectedNeed.amountNeededDisplay)}</p>
       `;
     }
 
@@ -286,7 +287,8 @@
         return;
       }
 
-      const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+      const checkedPaymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+      const paymentMethod = checkedPaymentMethod ? checkedPaymentMethod.value : "";
 
       const payload = {
         need_id: selectedNeed.id,
@@ -317,14 +319,22 @@
       if (e.target === donateModal) closeDonationModal();
     });
 
-    if (urlAmount && urlAmount !== "custom") {
-      donationAmount.value = urlAmount;
-    } else if (savedAmount && savedAmount !== "custom") {
-      donationAmount.value = savedAmount;
+    function initDonatePage() {
+      window.UMBRELLA_NEEDS_API.getNeedById(needId).then(function (need) {
+        selectedNeed = need;
+
+        if (urlAmount && urlAmount !== "custom") {
+          donationAmount.value = urlAmount;
+        } else if (savedAmount && savedAmount !== "custom") {
+          donationAmount.value = savedAmount;
+        }
+
+        renderNeedSummary();
+        renderPaymentFields("mpesa");
+      });
     }
 
-    renderNeedSummary();
-    renderPaymentFields("mpesa");
+    initDonatePage();
   </script>
 </body>
 </html>

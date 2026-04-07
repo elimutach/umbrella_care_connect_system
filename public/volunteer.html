@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/volunteer.css" />
   <link rel="stylesheet" href="assets/css/main.css" />
     <script src="assets/js/client-navbar.js" type="text/javascript" defer></script>
@@ -19,12 +20,47 @@
     <main-navbar-component></main-navbar-component>
   <main class="volunteer-shell">
     <section class="volunteer-hero">
-      <div class="hero-badge">Umbrella Connect • Volunteer Program</div>
+      <div class="hero-badge">Umbrella Connect | Volunteer Program</div>
       <h1>Become a Volunteer</h1>
       <p>
-        Fill in your details, choose the activity you want to take part in,
-        then select the days you will be available.
+        Volunteers bring time, skill, and steady human connection to the home.
+        Learn how your presence can support daily care, education, wellbeing, and community trust.
       </p>
+    </section>
+
+    <section class="volunteer-impact-grid" aria-label="Why volunteers matter">
+      <article>
+        <div class="impact-icon"><i class="bi bi-heart-pulse"></i></div>
+        <h2>Why volunteers matter</h2>
+        <p>Children need more than supplies. Volunteers add attention, mentoring, play, emotional support, and extra hands when the care team is stretched.</p>
+      </article>
+
+      <article>
+        <div class="impact-icon"><i class="bi bi-backpack"></i></div>
+        <h2>How volunteers assist</h2>
+        <p>They help with tutoring, meal support, cleanup drives, activity days, medical outreach, stock organization, storytelling, and safe child-friendly events.</p>
+      </article>
+
+      <article>
+        <div class="impact-icon"><i class="bi bi-shield-check"></i></div>
+        <h2>Care with responsibility</h2>
+        <p>Every volunteer is guided by respect, safeguarding, punctuality, and teamwork so support remains safe, dignified, and useful to the home.</p>
+      </article>
+    </section>
+
+    <section class="volunteer-path-section" aria-label="How to become a volunteer">
+      <div>
+        <span class="path-kicker">How to become a volunteer</span>
+        <h2>Start with your details, choose a role, and confirm your availability.</h2>
+        <p>The form below helps the team understand who you are, what you can help with, and when you are available. After submission, the team can review your application and match you with the right activity.</p>
+      </div>
+
+      <div class="path-steps">
+        <div><strong>1</strong><span>Tell us who you are</span></div>
+        <div><strong>2</strong><span>Pick a service area</span></div>
+        <div><strong>3</strong><span>Choose available days</span></div>
+        <div><strong>4</strong><span>Wait for team approval</span></div>
+      </div>
     </section>
 
     <section class="volunteer-card">
@@ -153,7 +189,7 @@
             <div class="row gy-4 align-items-center">
                 <div class="col-md-5">
                     <h5><i class="fas fa-umbrella-beach me-2" style="color: var(--brand);"></i>Umbrella Children's Home</h5>
-                    <p class="small">Kamakis, Kiambu County · 60+ children · 5 staff</p>
+                    <p class="small">Kamakis, Kiambu County | 60+ children | 5 staff</p>
                 </div>
                 <div class="col-md-4">
                     <i class="fas fa-envelope me-2"></i> info@umbrellachildren.or.ke <br>
@@ -166,7 +202,7 @@
                 </div>
             </div>
             <hr class="opacity-25">
-            <div class="text-center small">© 2025 Umbrella Connect · donation management for transparency</div>
+            <div class="text-center small">&copy; 2026 Umbrella Connect | donation management for transparency</div>
         </div>
     </section>
   </main>
@@ -174,7 +210,7 @@
   <!-- SUCCESS MODAL -->
   <div class="modal-backdrop hidden" id="successModal">
     <div class="modal-card success">
-      <div class="modal-icon">✓</div>
+      <div class="modal-icon">OK</div>
       <h3>Application Received</h3>
       <p>Your volunteer application has been received successfully.</p>
       <button class="btn btn-primary modal-close" type="button">Close</button>

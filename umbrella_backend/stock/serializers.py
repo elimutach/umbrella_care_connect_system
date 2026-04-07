@@ -21,10 +21,34 @@ class StockItemSerializer(serializers.ModelSerializer):
         ]
 
 
+from rest_framework import serializers
+from .models import StockItem, StockTransaction
+
+
+class StockItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StockItem
+        fields = [
+            "id",
+            "name",
+            "description",
+            "category",
+            "unit",
+            "current_quantity",
+            "reorder_level",
+            "is_active",
+            "created_at",
+            "updated_at",
+            "stock_no",
+            "reg_code",
+        ]
+
+
 class StockTransactionSerializer(serializers.ModelSerializer):
+    stock_item_id = serializers.UUIDField(source="stock_item.id", read_only=True)
     stock_item_name = serializers.CharField(source="stock_item.name", read_only=True)
-    transaction_type_display = serializers.SerializerMethodField()
-    source_display = serializers.SerializerMethodField()
+    transaction_type_display = serializers.CharField(source="get_transaction_type_display", read_only=True)
+    source_display = serializers.CharField(source="get_source_display", read_only=True)
 
     class Meta:
         model = StockTransaction

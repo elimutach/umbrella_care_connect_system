@@ -124,7 +124,15 @@ document.addEventListener("DOMContentLoaded", function () {
         body: JSON.stringify({ country: countryName })
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+let data = {};
+
+try {
+  data = JSON.parse(raw);
+} catch {
+  console.error("Non-JSON signup response:", raw);
+  throw new Error("Server returned HTML instead of JSON. Check Django traceback.");
+}
       const cities = Array.isArray(data?.data) ? data.data : [];
 
       citySelect.innerHTML = `<option value="">Select city</option>`;
@@ -278,7 +286,15 @@ document.addEventListener("DOMContentLoaded", function () {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+let data = {};
+
+try {
+  data = JSON.parse(raw);
+} catch {
+  console.error("Non-JSON signup response:", raw);
+  throw new Error("Server returned HTML instead of JSON. Check Django traceback.");
+}
 
       if (!response.ok) {
         throw new Error(data?.message || "Sign up failed.");
@@ -323,7 +339,15 @@ document.addEventListener("DOMContentLoaded", function () {
         }),
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+let data = {};
+
+try {
+  data = JSON.parse(raw);
+} catch {
+  console.error("Non-JSON signup response:", raw);
+  throw new Error("Server returned HTML instead of JSON. Check Django traceback.");
+}
 
       if (!response.ok) {
         throw new Error(data?.message || "Email verification failed.");
@@ -357,7 +381,15 @@ document.addEventListener("DOMContentLoaded", function () {
         }),
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+let data = {};
+
+try {
+  data = JSON.parse(raw);
+} catch {
+  console.error("Non-JSON signup response:", raw);
+  throw new Error("Server returned HTML instead of JSON. Check Django traceback.");
+}
 
       if (!response.ok) {
         throw new Error(data?.message || "Could not resend verification code.");

@@ -1,15 +1,18 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect
 
+from accounts.views import _require_role
 from .forms import StockIssueForm, StockAdjustmentForm, StockItemForm
 from .models import StockItem, StockTransaction
 from .services import issue_stock, adjust_stock
 
 
-@login_required
 def stock_list_view(request):
+    user, response = _require_role(request, "admin")
+    if response:
+        return response
+
     stock_items = StockItem.objects.all().order_by("name")
     recent_transactions = StockTransaction.objects.select_related(
         "stock_item", "donation", "need", "created_by"
@@ -25,13 +28,17 @@ def stock_list_view(request):
         "total_items": total_items,
         "low_stock_count": low_stock_count,
         "out_of_stock_count": out_of_stock_count,
+        "current_user": user,
     }
 
     return render(request, "stock/stock_list.html", context)
 
 
-@login_required
 def stock_add_view(request):
+    user, response = _require_role(request, "admin")
+    if response:
+        return response
+
     if request.method == "POST":
         form = StockItemForm(request.POST)
         if form.is_valid():
@@ -41,11 +48,14 @@ def stock_add_view(request):
     else:
         form = StockItemForm()
 
-    return render(request, "stock/stock_add.html", {"form": form})
+    return render(request, "stock/stock_add.html", {"form": form, "current_user": user})
 
 
-@login_required
 def stock_issue_view(request):
+    user, response = _require_role(request, "admin")
+    if response:
+        return response
+
     if request.method == "POST":
         form = StockIssueForm(request.POST)
         if form.is_valid():
@@ -57,7 +67,7 @@ def stock_issue_view(request):
                 issue_stock(
                     stock_item=stock_item,
                     quantity=quantity,
-                    user=None,
+                    user=user,
                     notes=notes,
                 )
                 messages.success(request, "Stock issued successfully.")
@@ -67,11 +77,14 @@ def stock_issue_view(request):
     else:
         form = StockIssueForm()
 
-    return render(request, "stock/stock_issue.html", {"form": form})
+    return render(request, "stock/stock_issue.html", {"form": form, "current_user": user})
 
 
-@login_required
 def stock_adjust_view(request):
+    user, response = _require_role(request, "admin")
+    if response:
+        return response
+
     if request.method == "POST":
         form = StockAdjustmentForm(request.POST)
         if form.is_valid():
@@ -86,7 +99,7 @@ def stock_adjust_view(request):
                 adjust_stock(
                     stock_item=stock_item,
                     adjustment_value=adjustment_value,
-                    user=None,
+                    user=user,
                     notes=notes,
                 )
                 messages.success(request, "Stock adjusted successfully.")
@@ -96,4 +109,4 @@ def stock_adjust_view(request):
     else:
         form = StockAdjustmentForm()
 
-    return render(request, "stock/stock_adjust.html", {"form": form})
+    return render(request, "stock/stock_adjust.html", {"form": form, "current_user": user})

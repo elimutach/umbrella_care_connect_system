@@ -6,7 +6,7 @@ connectedCallback(){
     <div class="logo-area">
       <i class="bi bi-umbrella fs-1" style="color: var(--);"></i> <span>Umbrella</span>Care
     </div>
-    <div class="nav-item active" data-page="analytics"><i class="bi bi-bar-chart-steps"></i> Analytics</div>
+    <div class="nav-item active" data-page="analytics" style="display: none;"><i class="bi bi-bar-chart-steps"></i> Analytics</div>
     <div class="nav-item" data-page="dashboard"><i class="bi bi-speedometer2"></i> Dashboard</div>
     
     <div class="nav-item" data-page="calendar"><i class="bi bi-calendar-event"></i> Calendar</div>

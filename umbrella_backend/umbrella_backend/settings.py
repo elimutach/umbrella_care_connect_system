@@ -28,7 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
-
+LOGIN_URL = "/signin/"
 
 # Application definition
 
@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'donations',
     'stock',
     'volunteers',
+    'calendarapp',
 ]
 
 MIDDLEWARE = [
@@ -142,9 +143,10 @@ DATABASES = {
 }
 
 import os
+from dotenv import load_dotenv
+
+load_dotenv(BASE_DIR / ".env.local")
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-RESEND_FROM_EMAIL = os.getenv(
-    "RESEND_FROM_EMAIL",
-    "Umbrella Care Connect <noreply@umbrella.kyfaru.com>"
-)
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "Umbrella Care Connect <noreply@umbrella.kyfaru.com>")
+CONTACT_RECEIVER_EMAIL = os.getenv("CONTACT_RECEIVER_EMAIL", "info@umbrellachildren.or.ke")

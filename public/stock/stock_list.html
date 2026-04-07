@@ -2,6 +2,150 @@
 <html>
 <head>
     <title>Stock</title>
+
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: Inter, Arial, sans-serif;
+    background: #f8fafc;
+    color: #1f2937;
+    padding: 32px 18px 48px;
+  }
+
+  body > h1,
+  body > h2,
+  body > p,
+  body > div,
+  body > table {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  h1 {
+    margin: 0 0 24px;
+    font-size: 34px;
+    font-weight: 800;
+    color: #101828;
+  }
+
+  h2 {
+    margin-top: 28px;
+    margin-bottom: 16px;
+    font-size: 24px;
+    font-weight: 800;
+    color: #1d2939;
+  }
+
+  body > p {
+    font-size: 15px;
+    margin: 8px auto;
+  }
+
+  body > p:nth-of-type(1),
+  body > p:nth-of-type(2),
+  body > p:nth-of-type(3) {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 16px 18px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    font-weight: 700;
+  }
+
+  body > div[style] {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 16px 18px;
+    margin-bottom: 18px !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  a {
+    color: #d97706;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.06);
+    margin-bottom: 28px;
+    display: block;
+    overflow-x: auto;
+  }
+
+  thead {
+    background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+  }
+
+  th,
+  td {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 1px solid #eef2f6;
+    white-space: nowrap;
+  }
+
+  th {
+    font-weight: 800;
+    color: #344054;
+  }
+
+  tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  {% if messages %}
+  body > p {
+    background: #ecfdf3;
+    border: 1px solid #abefc6;
+    color: #027a48;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  {% endif %}
+
+  @media (max-width: 768px) {
+    body {
+      padding: 22px 12px 36px;
+    }
+
+    h1 {
+      font-size: 28px;
+    }
+
+    h2 {
+      font-size: 21px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      font-size: 13px;
+    }
+  }
+</style>
+
 </head>
 <body>
     <h1>Stock</h1>

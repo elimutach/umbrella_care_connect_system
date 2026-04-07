@@ -7,6 +7,7 @@ djangorestframework==3.17.1
 idna==3.11
 psycopg==3.3.3
 psycopg-binary==3.3.3
+python-dotenv==1.2.2
 requests==2.33.1
 resend==2.27.0
 sqlparse==0.5.5

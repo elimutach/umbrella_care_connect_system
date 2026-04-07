@@ -1,7 +1,6 @@
 import json
-from datetime import date, datetime
+from datetime import datetime
 from functools import wraps
-from uuid import UUID
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -38,8 +37,49 @@ def needs_page(request):
     return render(request, "needs.html")
 
 
+def normalize_need_type(value):
+    return "cash" if str(value or "").strip().lower() == "cash" else "in_kind"
+
+
+def normalize_unit(unit, need_type, title=""):
+    if need_type == "cash":
+        return "KES"
+
+    cleaned_unit = str(unit or "").strip()
+    if cleaned_unit and cleaned_unit.lower() != "kes":
+        return cleaned_unit
+
+    # fallback for in-kind rows if unit is blank
+    cleaned_title = str(title or "").strip()
+    return cleaned_title if cleaned_title else "units"
+
+
+def format_number(value):
+    try:
+        number = float(value or 0)
+    except (TypeError, ValueError):
+        number = 0.0
+
+    if number.is_integer():
+        return f"{int(number):,}"
+    return f"{number:,.2f}"
+
+
+def format_need_value(amount, unit, need_type):
+    formatted_amount = format_number(amount)
+
+    if need_type == "cash":
+        return f"KES {formatted_amount}"
+
+    return f"{formatted_amount} {unit}".strip()
+
+
 def serialize_need(need):
     donors_list = need.donors if isinstance(need.donors, list) else []
+
+    need_type = normalize_need_type(need.need_type)
+    unit = normalize_unit(need.unit, need_type, need.title)
+    remaining = max((need.amount_needed or 0) - (need.amount_received or 0), 0)
 
     return {
         "id": str(need.id),
@@ -48,8 +88,8 @@ def serialize_need(need):
         "category": need.need_type or "-",
         "quantity_required": float(need.amount_needed),
         "quantity_fulfilled": float(need.amount_received),
-        "quantity_remaining": float(need.amount_needed - need.amount_received),
-        "priority": "-",  # not present in current Supabase-backed table
+        "quantity_remaining": float(remaining),
+        "priority": "-",
         "deadline": need.expiring_at.date().isoformat() if need.expiring_at else None,
         "status": need.status,
         "posted_by_name": None,
@@ -57,14 +97,21 @@ def serialize_need(need):
         "closed_at": need.updated_at.isoformat() if need.status == "closed" else None,
         "created_at": need.created_at.isoformat() if need.created_at else None,
         "updated_at": need.updated_at.isoformat() if need.updated_at else None,
-        "unit": need.unit,
-        "need_type": need.need_type,
+        "unit": unit,
+        "need_type": need_type,
         "needs_registration_code": need.needs_registration_code,
         "image_url": need.image_url,
         "donors": donors_list,
         "donors_count": len(donors_list),
+
+        # raw numeric values
         "amount_needed": float(need.amount_needed),
         "amount_received": float(need.amount_received),
+
+        # formatted display values for frontend
+        "display_amount_needed": format_need_value(need.amount_needed, unit, need_type),
+        "display_amount_received": format_need_value(need.amount_received, unit, need_type),
+        "display_amount_remaining": format_need_value(remaining, unit, need_type),
     }
 
 
@@ -108,16 +155,20 @@ def needs_api(request):
         if data.get("deadline"):
             expiring_at = datetime.fromisoformat(f"{data['deadline']}T00:00:00")
 
+        title = (data.get("title") or "").strip()
+        need_type = normalize_need_type(data.get("need_type", "in_kind"))
+        unit = normalize_unit(data.get("unit"), need_type, title)
+
         need = NeedRecord.objects.create(
             needs_registration_code=data.get("needs_registration_code") or f"NEED-{timezone.now().strftime('%Y%m%d%H%M%S')}",
-            title=(data.get("title") or "").strip(),
+            title=title,
             description=data.get("description", ""),
             amount_needed=data.get("quantity_required", 0),
             amount_received=data.get("quantity_fulfilled", 0),
             status=data.get("status", "pending"),
             expiring_at=expiring_at,
-            need_type=data.get("need_type", "in_kind"),
-            unit=data.get("unit", "units"),
+            need_type=need_type,
+            unit=unit,
             image_url=data.get("image_url", ""),
             donors=data.get("donors", []),
             created_at=timezone.now(),
@@ -153,8 +204,12 @@ def need_detail_api(request, need_id):
             return JsonResponse({"error": "Invalid JSON body."}, status=400)
 
         try:
+            new_title = (data["title"] or "").strip() if "title" in data else need.title
+            new_need_type = normalize_need_type(data.get("need_type", need.need_type))
+            new_unit = normalize_unit(data.get("unit", need.unit), new_need_type, new_title)
+
             if "title" in data:
-                need.title = (data["title"] or "").strip()
+                need.title = new_title
             if "description" in data:
                 need.description = data["description"]
             if "quantity_required" in data:
@@ -168,10 +223,10 @@ def need_detail_api(request, need_id):
                 )
             if "status" in data:
                 need.status = data["status"]
-            if "need_type" in data:
-                need.need_type = data["need_type"]
-            if "unit" in data:
-                need.unit = data["unit"]
+
+            need.need_type = new_need_type
+            need.unit = new_unit
+
             if "image_url" in data:
                 need.image_url = data["image_url"]
             if "donors" in data and isinstance(data["donors"], list):

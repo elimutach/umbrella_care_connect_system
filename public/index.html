@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Umbrella Connect · Donation & Donor Management</title>
+    <title>Umbrella Connect | Donation & Donor Management</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 6 (free) -->
@@ -18,28 +18,22 @@
     <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container-fluid px-lg-5">
             <!-- left logo -->
-            <a class="navbar-brand" href="#"><img src="https://placehold.co/120x50/2F394C/white?text=Umbrella+Care" alt="Umbrella logo"></a>
+            <a class="navbar-brand" href="/"><img src="https://placehold.co/120x50/2F394C/white?text=Umbrella+Care" alt="Umbrella logo"></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" title="">
                 <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainNavbar">
                 <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#about">About US</a></li>
-                    <!-- Needs dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Needs</a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="volunteer.html"><i class="far fa-calendar-check me-2"></i>Volunteer</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-boxes me-2"></i>Resources</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/needs/">Live Needs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/volunteer/">Volunteer</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/contact/">Contact</a></li>
                 </ul>
                 <div class="d-flex align-items-center">
                     <button class="mode-toggle" id="themeToggle"><i class="fas fa-palette me-1"></i>light/dark</button>
-                    <a href="/signin" class="btn btn-login">Log in</a>
-                    <a href="/signup" class="btn btn-signup">Sign up</a>
+                    <a href="/signin/" class="btn btn-login">Log in</a>
+                    <a href="/signup/" class="btn btn-signup">Sign up</a>
                 </div>
             </div>
         </div>
@@ -49,10 +43,10 @@
     <section class="hero" style="margin-top: 76px;">
         <div class="container">
             <h1 class="display-1 text-white">Be part of the <br> <span class="symbol-title">MOVEMENT !</span></h1>
-            <p class="lead text-white px-4 py-2 d-inline-block">Umbrella Children's Home connects hearts worldwide — every donation, smile and resource weaves hope. Join us in transforming 60+ young lives today.</p>
+            <p class="lead text-white px-4 py-2 d-inline-block">Umbrella Children's Home connects hearts worldwide. Every donation, smile and resource weaves hope. Join us in transforming 60+ young lives today.</p>
             <div class="mt-5">
-                <a href="#" class="btn btn-solid-brand btn-lg"><i class="fas fa-hand-holding-heart me-2"></i>See orphanage needs</a>
-                <a href="#" class="btn btn-outline-brand btn-lg"><i class="fas fa-rocket me-2"></i>Join the movement</a>
+                <a href="/needs/" class="btn btn-solid-brand btn-lg"><i class="fas fa-hand-holding-heart me-2"></i>See orphanage needs</a>
+                <a href="/volunteer/" class="btn btn-outline-brand btn-lg"><i class="fas fa-rocket me-2"></i>Join the movement</a>
             </div>
         </div>
     </section>
@@ -64,7 +58,7 @@
                 <div class="col-md-6">
                     <span class="badge bg-opacity-25 text-bg-light mb-3" style="background: var(--brand-soft); color: var(--brand);">Who we are</span>
                     <h2 class="display-5 fw-bold mb-4">Short about Umbrella</h2>
-                    <p class="fs-5" style="color: var(--text);">Umbrella Children's Home in Kamakis cares for over 60 children with unwavering dedication. We bridge the gap between loving donors and little dreams — every item, every shilling, every moment counts. Our home runs on transparency, dignity, and community.</p>
+                    <p class="fs-5" style="color: var(--text);">Umbrella Children's Home in Kamakis cares for over 60 children with unwavering dedication. We bridge the gap between loving donors and little dreams. Every item, every shilling, every moment counts. Our home runs on transparency, dignity, and community.</p>
                     <a href="#" class="btn btn-login mt-3" style="border-width:2px; padding:0.7rem 2.8rem;"><i class="fas fa-arrow-right me-2"></i>Learn more</a>
                 </div>
                 <div class="col-md-6 about-image text-center">
@@ -74,10 +68,28 @@
         </div>
     </section>
 
-    <!-- section 3: impact & 5 children images -->
+    <!-- section 3: live needs preview -->
+    <section class="home-needs-section" id="live-needs-preview">
+        <div class="container">
+            <span class="section-kicker">Live needs board</span>
+            <div class="home-needs-heading">
+                <div>
+                    <h2>Needs waiting for support</h2>
+                    <p>These five requests are pulled from the live database so new visitors can quickly see what the home needs most right now.</p>
+                </div>
+                <a href="/needs/" class="btn btn-login" style="border-width:2px; padding:0.7rem 2.2rem;">View all needs</a>
+            </div>
+
+            <div class="home-needs-track" id="homeNeedsTrack">
+                <div class="home-needs-empty">Loading live needs...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- section 4: impact & 5 children images -->
     <section class="py-5">
         <div class="container text-center">
-            <div class="impact-text mb-5">small sparks · big impact</div>
+            <div class="impact-text mb-5">small sparks | big impact</div>
             <!-- 5 images row -->
             <div class="row g-4">
                 <div class="col-md-2 col-6 offset-md-1"><img class="child-img" src="https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1974&auto=format&fit=crop" alt="child"></div>
@@ -88,7 +100,7 @@
             </div>
             <!-- see more button with border 15px transparent, border main color, hover fill -->
             <div class="text-center">
-                <a href="#" class="btn btn-see-more">see more stories →</a>
+                <a href="/volunteer/" class="btn btn-see-more">see more stories -></a>
             </div>
         </div>
     </section>
@@ -99,7 +111,7 @@
             <div class="row gy-4 align-items-center">
                 <div class="col-md-5">
                     <h5><i class="fas fa-umbrella-beach me-2" style="color: var(--brand);"></i>Umbrella Children's Home</h5>
-                    <p class="small">Kamakis, Kiambu County · 60+ children · 5 staff</p>
+                    <p class="small">Kamakis, Kiambu County | 60+ children | 5 staff</p>
                 </div>
                 <div class="col-md-4">
                     <i class="fas fa-envelope me-2"></i> info@umbrellachildren.or.ke <br>
@@ -112,13 +124,15 @@
                 </div>
             </div>
             <hr class="opacity-25">
-            <div class="text-center small">© 2025 Umbrella Connect · donation management for transparency</div>
+            <div class="text-center small">&copy; 2026 Umbrella Connect | donation management for transparency</div>
         </div>
     </section>
 
     <!-- Bootstrap JS + theme switcher -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/main.js"></script>
+    <script src="/assets/js/public-needs.js"></script>
+    <script src="/assets/js/home-needs.js"></script>
     <!-- tiny fix for transparent button border: 15px radius already -->
 </body>
 </html>

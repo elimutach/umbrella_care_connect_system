@@ -30,7 +30,7 @@ body {
 .volunteer-shell {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px 80px;
+  padding: 110px 20px 80px;
 }
 
 .volunteer-hero {
@@ -61,6 +61,119 @@ body {
   color: var(--muted);
   font-size: 1rem;
   line-height: 1.7;
+}
+
+.volunteer-impact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0 0 24px;
+}
+
+.volunteer-impact-grid article {
+  min-height: 260px;
+  border-radius: 30px;
+  padding: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 243, 223, 0.78)),
+    var(--card);
+  border: 1px solid rgba(244, 166, 35, 0.2);
+  box-shadow: var(--shadow);
+}
+
+.impact-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: white;
+  font-size: 1.5rem;
+  margin-bottom: 18px;
+}
+
+.volunteer-impact-grid h2 {
+  margin: 0 0 10px;
+  font-size: 1.18rem;
+  font-weight: 900;
+}
+
+.volunteer-impact-grid p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.volunteer-path-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+  margin: 0 0 28px;
+  padding: 30px;
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at top right, rgba(244, 166, 35, 0.24), transparent 28%),
+    #16202a;
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.path-kicker {
+  display: inline-flex;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: rgba(244, 166, 35, 0.16);
+  color: var(--brand-light);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 900;
+  font-size: 0.76rem;
+  margin-bottom: 14px;
+}
+
+.volunteer-path-section h2 {
+  margin: 0 0 12px;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.volunteer-path-section p {
+  margin: 0;
+  color: #d8e0ea;
+  line-height: 1.8;
+}
+
+.path-steps {
+  display: grid;
+  gap: 14px;
+}
+
+.path-steps div {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.path-steps strong {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--brand);
+  color: white;
+  flex: 0 0 auto;
+}
+
+.path-steps span {
+  font-weight: 800;
 }
 
 .volunteer-card {
@@ -407,7 +520,9 @@ body {
 
 @media (max-width: 900px) {
   .grid-2,
-  .activity-grid {
+  .activity-grid,
+  .volunteer-impact-grid,
+  .volunteer-path-section {
     grid-template-columns: 1fr;
   }
 

@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-c4%zc(8tc6d987je5cplfjf(&e3kmrv)zp82gt!0f8g5)d=s$_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "umbrella.kyfaru.com", "https://umbrella-care-connect-system.onrender.com"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "https://umbrella-care-connect-system.onrender.com"]
 
 LOGIN_URL = "/signin/"
 

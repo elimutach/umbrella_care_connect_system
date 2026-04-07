@@ -24,7 +24,7 @@ FRONTEND_DIR = BASE_DIR.parent / "public"
 SECRET_KEY = 'django-insecure-c4%zc(8tc6d987je5cplfjf(&e3kmrv)zp82gt!0f8g5)d=s$_'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "umbrella-care-connect-system.onrender.com"]
 
@@ -125,6 +125,8 @@ USE_TZ = True
 
 STATIC_URL = "/assets/"
 STATICFILES_DIRS = [FRONTEND_DIR / "assets"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

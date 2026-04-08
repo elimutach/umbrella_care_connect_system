@@ -411,6 +411,28 @@ def _create_otp(user, purpose):
 
     return otp, None
 
+def _create_demo_otp(user, purpose, code="123456"):
+    _deactivate_existing_otps(user, purpose)
+
+    now = timezone.now()
+
+    otp = AuthOtp.objects.create(
+        user=user,
+        purpose=purpose,
+        otp_hash=_hash_value(code),
+        email_snapshot=user.email,
+        code_last2=code[-2:],
+        attempts=0,
+        max_attempts=5,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+        expires_at=now + timedelta(minutes=OTP_LIFETIME_MINUTES),
+        used_at=None,
+    )
+
+    return otp, None
+
 
 def _expire_user_sessions(user):
     now = timezone.now()
@@ -1023,7 +1045,10 @@ class AdminSigninRequestOtpAPIView(APIView):
             return Response({"message": "Admin account not found."}, status=404)
 
         try:
-            valid_password = bcrypt.checkpw(password.encode("utf-8"), (user.password_hash or "").encode("utf-8"))
+            valid_password = bcrypt.checkpw(
+                password.encode("utf-8"),
+                (user.password_hash or "").encode("utf-8")
+            )
         except Exception:
             valid_password = False
 
@@ -1036,12 +1061,12 @@ class AdminSigninRequestOtpAPIView(APIView):
         if user.status != "active":
             return Response({"message": "This admin account is not active."}, status=403)
 
-        otp, error = _create_otp(user, "login")
+        otp, error = _create_demo_otp(user, "login", code="123456")
         if not otp:
-            return Response({"message": f"Admin OTP email could not be sent: {error}"}, status=500)
+            return Response({"message": f"Admin demo OTP could not be created: {error}"}, status=500)
 
         return Response({
-            "message": f"A 6-digit verification code was sent to {user.email}.",
+            "message": "Demo admin OTP created.",
             "otp_request_token": str(otp.otp_request_token),
             "expires_at": otp.expires_at.isoformat(),
         }, status=200)
@@ -1133,12 +1158,12 @@ class AdminSigninResendOtpAPIView(APIView):
         if user.status != "active":
             return Response({"message": "This admin account is not active."}, status=403)
 
-        otp, error = _create_otp(user, "login")
+        otp, error = _create_demo_otp(user, "login", code="123456")
         if not otp:
-            return Response({"message": f"Could not resend admin OTP: {error}"}, status=500)
+            return Response({"message": f"Could not resend admin demo OTP: {error}"}, status=500)
 
         return Response({
-            "message": f"A fresh admin OTP was sent to {user.email}.",
+            "message": "A fresh demo admin OTP is ready.",
             "otp_request_token": str(otp.otp_request_token),
             "expires_at": otp.expires_at.isoformat(),
         }, status=200)

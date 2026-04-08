@@ -86,13 +86,21 @@
           throw new Error(data?.message || "Unable to authorize access.");
         }
 
-        sessionStorage.setItem("adminOtpRequestToken", data.otp_request_token || "");
-        sessionStorage.setItem("adminLoginValue", payload.login);
+        if (data.redirect_url) {
+  showToast("success", "Authorized", "Admin sign in successful.");
+  setTimeout(() => {
+    window.location.href = data.redirect_url;
+  }, 400);
+  return;
+}
 
-        showToast("success", "OTP sent", "Verification code sent to the admin email.");
-        setTimeout(() => {
-          window.location.href = "/admin-otp/";
-        }, 700);
+sessionStorage.setItem("adminOtpRequestToken", data.otp_request_token || "");
+sessionStorage.setItem("adminLoginValue", payload.login);
+
+showToast("success", "OTP sent", "Verification code sent to the admin email.");
+setTimeout(() => {
+  window.location.href = "/admin-otp/";
+}, 700);
       } catch (error) {
         showToast("error", "Authorization failed", error.message || "Unable to continue.");
       } finally {

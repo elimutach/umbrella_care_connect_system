@@ -1061,14 +1061,13 @@ class AdminSigninRequestOtpAPIView(APIView):
         if user.status != "active":
             return Response({"message": "This admin account is not active."}, status=403)
 
-        otp, error = _create_demo_otp(user, "login", code="123456")
-        if not otp:
-            return Response({"message": f"Admin demo OTP could not be created: {error}"}, status=500)
+        auth_session = _create_session_for_user(user, request)
 
         return Response({
-            "message": "Demo admin OTP created.",
-            "otp_request_token": str(otp.otp_request_token),
-            "expires_at": otp.expires_at.isoformat(),
+            "message": "Admin sign in successful.",
+            "redirect_url": _get_dashboard_redirect_for_user(user),
+            "session_request_token": str(auth_session.session_request_token),
+            "session_token_hint": auth_session.token_hint,
         }, status=200)
 
 

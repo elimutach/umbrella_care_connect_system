@@ -35,6 +35,8 @@ ALLOWED_HOSTS = ["127.0.0.1", "localhost", "umbrella-care-connect-system.onrende
 
 LOGIN_URL = "/signin/"
 
+DEMO_ADMIN_BYPASS = True
+
 # Application definition
 
 INSTALLED_APPS = [

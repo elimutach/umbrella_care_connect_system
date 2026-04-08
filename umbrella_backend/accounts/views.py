@@ -26,6 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import UserManagement, DonorProfile, VolunteerProfile, AuthOtp, AuthSession
 from .serializers import UserManagementSerializer
 from .authentication import DashboardSessionAuthentication
+from types import SimpleNamespace
 
 
 
@@ -70,6 +71,8 @@ def pledge_page(request):
 
 
 def admin_signin_page(request):
+    if getattr(settings, "DEMO_ADMIN_BYPASS", False):
+        return redirect("/admin/dashboard/")
     return render(request, "admin/admin-signin.html")
 
 
@@ -119,6 +122,21 @@ def _require_role(request, *allowed_roles):
 @never_cache
 @ensure_csrf_cookie
 def admin_dashboard_view(request):
+    if getattr(settings, "DEMO_ADMIN_BYPASS", False):
+        demo_user = SimpleNamespace(
+            id="demo-admin",
+            first_name="Demo",
+            last_name="Admin",
+            full_name="Demo Admin",
+            username="demo_admin",
+            email="demo@umbrella.local",
+            role="admin",
+            status="active",
+            verified=True,
+            is_authenticated=True,
+        )
+        return render(request, "admin/dashboard.html", {"current_user": demo_user, "demo_mode": True})
+
     user, response = _require_role(request, "admin")
     if response:
         return response
